@@ -1,3 +1,10 @@
+# How to run custom volatility plugin
+```python
+cd <plugin directory>
+vol -f chrome_incog.mem --plugin-dir . test_plugin
+```
+
+
 # Understanding how to write plugins
 
 Ok here's some context on how volatility plugins work.

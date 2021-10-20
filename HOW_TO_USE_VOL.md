@@ -156,7 +156,12 @@ def run(self):
 
 ## Scanning
 
-Once you have a layer you are able to perform scanning.
+Once you have a layer you are able to perform scanning for your needles.
+
+Needles are just bytes you 100% know are in what you are finding for.
+Eg. if you know that url contains "http", your needle to find is "http"
+
+The scan will return an address which is a virtual address.
 
 All the need to do is do the following:
 ```python
@@ -236,6 +241,15 @@ class YaraScanner(interfaces.layers.ScannerInterface):
                 yield (offset + data_offset, match.rule, name, value)
 ```
 
+## Reading layers
+Once you found an address (virtual address) you can start to do reading
+
+simply do the following:
+```python
+data = layer.read(address, length_to_read)
+```
+
+and with that you can start to do data manipulation
 
 # Importing files
 If you have a custom file that you want to import, you can't import it as such

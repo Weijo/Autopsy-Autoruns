@@ -57,13 +57,3 @@ python3 setup.py install
 cd <project directory here>
 vol -f <mem file> --plugin-dir . chrome_history
 ```
-
-# Importing files
-If you have a custom file that you want to import, you can't import it as such
-```
-import sqlite_helper
-```
-the way to import it for volatility is as such
-```
-import volatility3.plugins.sqlite_helper
-```

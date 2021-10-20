@@ -73,6 +73,8 @@ last_visit_time -> 4 byte integer (06)
 hidden -> (09 | 08 | 01) (1 byte integer, can be 0 or 1)
 ```
 
+So far I've only seen hidden being 0 or 1 and nothing else but from superponible's history needle it included `\x01\x01http` which searches for hex 01 in hidden and last_visit_time which doesn't seem to make sense.
+
 ```yara
 rule URL_HEADER { 
   strings: 

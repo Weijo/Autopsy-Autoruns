@@ -24,7 +24,7 @@ In each plugin there are **3** main functions to be written
 - run 
 
 ## get_requirements function
-The `get_requirements` function has to be '@classmethod' as it is called before creating an object
+The `get_requirements` function has to be `@classmethod` as it is called before creating an object
 The purpose of this function is to:
 - load modules
 - load plugins
@@ -53,10 +53,10 @@ requirements.URIRequirement(name = "yara_file", description = "Yara rules (as a 
 ```
 
 ## run function
-When you call a plugin using `vol`, it will call the run function of the particular plugin.
+When you call a plugin using `vol`, it will call the `run` function of that particular plugin.
 
 This function mainly does the UI portion of the output.
-It does a return for a `TreeGrid` which requires a list of titles and a call to the \_generator function.
+It does a return for a `TreeGrid` which requires a list of titles and a call to the `_generator` function.
 eg.
 
 ```python
@@ -66,7 +66,7 @@ def run(self):
 ``` 
 
 In each element of the list, you need to specify the title and the type of data you are dealing with.
-Note that if you want it to display as hex you need to use the fomat_hints.Hex function to convert it to hex
+Note that if you want it to display as hex you need to use the `fomat_hints.Hex` function to convert it to hex
 
 ## \_generator function
 
@@ -85,7 +85,7 @@ Layer is the "address space" of the memory but you will need to give it context
 What I mean is that you can either choose to use the address space of the entire memory or the address space of a process
 
 ## Kernel layer
-There are two ways of how I've seen
+There are two ways of how I've seen this being created
 
 first is through the kernel module
 ```python

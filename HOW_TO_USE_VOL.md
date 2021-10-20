@@ -119,7 +119,7 @@ def _generator(self):
 This one has a bit more code as it relies on pslist to show us the list of processes then afterwards we reference the layer
 
 ```python
-from volatility3.plugins.windows import pslist, vadinfo
+from volatility3.plugins.windows import pslist
 
 @classmethod
     def get_requirements(cls):
@@ -223,6 +223,9 @@ for address in layer.scan(
 You can also build you own scanner
 
 this is done by creating a class that inherits the `interfaces.layers.ScannerInterface`
+
+If you have arguments to supply you need to specify it in `__init__`
+The rest of the scanning algorithm is done in `__call__` 
 
 ```python
 class YaraScanner(interfaces.layers.ScannerInterface):

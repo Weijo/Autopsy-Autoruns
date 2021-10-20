@@ -57,3 +57,34 @@ python3 setup.py install
 cd <project directory here>
 vol -f <mem file> --plugin-dir . chrome_history
 ```
+
+# Wei Jie's notes
+For chromium based browsers, I'm searching for the leaf headers using yara
+
+So far I have come up with the rule for the URL table of the History file
+
+```plaintext
+id -> 00 (always NULL, takes the row_id as the id)
+url -> variable length, can be as long as 2 bytes  (part of [2-4])
+title -> variable length, can be as long as 2 bytes (part of [2-4]) 
+visit_count -> (09 | 08 | 01) (1 byte integer, can be 0 or 1)
+typed_count -> (09 | 08 | 01) (1 byte integer, can be 0 or 1)
+last_visit_time -> 4 byte integer (06)
+hidden -> (09 | 08 | 01) (1 byte integer, can be 0 or 1)
+```
+
+```yara
+rule URL_HEADER { 
+  strings: 
+    $a = { 00 [2-4] ( 09 | 08 | 01 ) ( 09 | 08 | 01 ) 06 ( 08 | 01 ) } 
+  condition: 
+    $a 
+}
+```
+
+
+# References
+- Chrome & firefox history by superponible (https://github.com/superponible/volatility-plugins)
+- Chrome Ragamuffin by cube0x8 (https://github.com/cube0x8/chrome_ragamuffin)
+- SqliteFind by mbrown1413 (https://github.com/mbrown1413/SqliteFind)
+- Reading sqlite files at the hex level (https://askclees.com/2020/11/20/sqlite-databases-at-hex-level/)

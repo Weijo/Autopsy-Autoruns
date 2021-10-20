@@ -9,8 +9,11 @@
 
 ## Instructions for memory capture
 - Download the windows vm [here](https://developer.microsoft.com/en-us/windows/downloads/virtual-machines/)
+- Run vm with 4GB ram
 - Transfer your browser installer to the vm **DO NOT DOWNLOAD IT ON THE BROWSER**
-- Look below for the things you are to browse
+- See below for the things you are to browse
+- Do not close the browsers
+- Run Belkasoft Ramcapturer
 
 ## What to capture
 Chrome:

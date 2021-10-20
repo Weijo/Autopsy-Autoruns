@@ -1,5 +1,12 @@
 # Private browser memory forensics
 
+## Browsers to look at 
+- Chrome
+- Firefox
+- Internet Explorer
+- Edge
+- Vivaldi
+
 ## Instructions for memory capture
 - Download the windows vm [here](https://developer.microsoft.com/en-us/windows/downloads/virtual-machines/)
 - Transfer your browser installer to the vm **DO NOT DOWNLOAD IT ON THE BROWSER**

@@ -36,13 +36,12 @@ The rest:
 - duckduckgo.com
 - search for malware
 - go to wikipedia page for malware https://en.wikipedia.org/wiki/Malware
-- search for picoctf 
-- go to picoctf site https://picoctf.org/
-- click on log in https://play.picoctf.org/login
-- login with credentials:
-  - owadeeoh
-  - soonIwillord123
-  - click on "Obedient Cat" challenge and download the file
+- log in to wikipedia
+  - cyberdokutah
+  - dokutah1!
+- duckduckgo.com
+- search for rick roll
+  - go to images, right click download image by
 
 # Volatility setup
 ```

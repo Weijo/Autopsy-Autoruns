@@ -4,7 +4,7 @@
 Autopsy plugin that scans the Auto-Start Extensibility Points (ASEPs) and list out the potential persistences
 
 ## TODO / Roadmap
-- [ ] Figure out how to import modules into Autopsy
+- [x] Figure out how to import modules into Autopsy
 - [ ] Have a disk image to test on
 - [ ] Be able to run RegistryExample plugin
 - [ ] Figure out where the logging is located
@@ -14,6 +14,17 @@ Autopsy plugin that scans the Auto-Start Extensibility Points (ASEPs) and list o
 - [ ] Get GUI to display like autoruns
 - [ ] Write Report
 - [ ] ORD
+
+## Importing python modules into Autopsy
+After opening a case, Tools > Python Module
+
+Create a folder inside the python_module folder and place your python file there
+You'll see the ingest module when you do Tool > Run Ingest Module
+
+## Log location
+Help > Open Log Folder
+
+Probably not
 
 ## References
 - Installing Python Module (http://sleuthkit.org/autopsy/docs/user-docs/4.19.2/module_install_page.html)

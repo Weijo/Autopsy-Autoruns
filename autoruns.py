@@ -167,14 +167,14 @@ class AutoRunsIngestModule(DataSourceIngestModule):
             # Make an artifact on the blackboard.  TSK_INTERESTING_FILE_HIT is a generic type of
             # artfiact.  Refer to the developer docs for other examples.
             attrs = Arrays.asList(BlackboardAttribute(BlackboardAttribute.Type.TSK_SET_NAME,
-                                                      SampleJythonDataSourceIngestModuleFactory.moduleName,
+                                                      AutoRunsModuleFactory.moduleName,
                                                       "Test file"))
             art = file.newAnalysisResult(BlackboardArtifact.Type.TSK_INTERESTING_FILE_HIT, Score.SCORE_LIKELY_NOTABLE,
                                          None, "Test file", None, attrs).getAnalysisResult()
 
             try:
                 # post the artifact for listeners of artifact events.
-                blackboard.postArtifact(art, SampleJythonDataSourceIngestModuleFactory.moduleName)
+                blackboard.postArtifact(art, AutoRunsModuleFactory.moduleName)
             except Blackboard.BlackboardException as e:
                 self.log(Level.SEVERE, "Error indexing artifact " + art.getDisplayName())
 

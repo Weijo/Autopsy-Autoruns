@@ -130,6 +130,38 @@ class AutoRunsIngestModule(DataSourceIngestModule):
             'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/Run'
         )
 
+        # Winlogon & AppInit
+        self.registryWinlogonAppinit = (
+            'Microsoft\Windows NT\CurrentVersion\Winlogon',  # Value AppInit_DLLs
+            'Microsoft\Windows NT\CurrentVersion\Winlogon\Notify',
+            'Microsoft\Windows NT\CurrentVersion\Winlogon\Userinit',
+            'Microsoft\Windows NT\CurrentVersion\Winlogon\VmApplet',
+            'Microsoft\Windows NT\CurrentVersion\Winlogon\Shell',
+            'Microsoft\Windows NT\CurrentVersion\Winlogon\TaskMan',
+            'Microsoft\Windows NT\CurrentVersion\Winlogon\System'
+        )
+
+        # Services
+        self.registryServices = (
+            'CurrentControlSet\Services'
+        )
+
+        # Scheduled Tasks
+        self.FileSystemScheduledTasks = (
+            'C:\Windows\System32\Tasks\\'
+        )
+
+        # Active Setup
+        self.registryActiveSetup = (
+            'Microsoft\Active Setup\Installed Components'
+        )
+
+        # Microsoft Fix-it
+        self.registryFixit = (
+            'Microsoft\Windows NT\CurrentVersion\AppCompatFlags\InstalledSDB'
+        )
+
+
     # Where the analysis is done.
     # The 'dataSource' object being passed in is of type org.sleuthkit.datamodel.Content.
     # See: http://www.sleuthkit.org/sleuthkit/docs/jni-docs/latest/interfaceorg_1_1sleuthkit_1_1datamodel_1_1_content.html

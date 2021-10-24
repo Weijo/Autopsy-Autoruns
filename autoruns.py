@@ -62,7 +62,7 @@ from java.util import Arrays
 class AutoRunsModuleFactory(IngestModuleFactoryAdapter):
 
     # TODO: give it a unique name.  Will be shown in module list, logs, etc.
-    moduleName = "Sample Data Source Module"
+    moduleName = "Autoruns"
 
     def getModuleDisplayName(self):
         return self.moduleName
@@ -154,7 +154,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
         # Scheduled Tasks
         self.FileSystemScheduledTasks = (
-            'C:\Windows\System32\Tasks'
+            'C:\\Windows\\System32\\Tasks'
         )
 
         # Active Setup

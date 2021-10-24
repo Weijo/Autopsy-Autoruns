@@ -78,7 +78,7 @@ from org.sleuthkit.autopsy.casemodule import Case
 from org.sleuthkit.autopsy.casemodule.services import Services
 from org.sleuthkit.autopsy.casemodule.services import FileManager
 from org.sleuthkit.autopsy.datamodel import ContentUtils
-from org.sleuthkit.autopsy.modules.interestingitems import 
+from org.sleuthkit.autopsy.modules.interestingitems import FilesSetsManager
 
 # Factory that defines the name and details of the module and allows Autopsy
 # to create instances of the modules that will do the analysis.

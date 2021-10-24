@@ -31,35 +31,61 @@
 # Search for TODO for the things that you need to change
 # See http://sleuthkit.org/autopsy/docs/api-docs/latest/index.html for documentation
 
-import jarray
 import inspect
+import os
+import shutil
+import ntpath
+
+from javax.swing import JCheckBox
+from java.awt import GridLayout
+from java.awt import GridBagLayout
+from java.awt import GridBagConstraints
+from javax.swing import JPanel
+from javax.swing import JFileChooser
+from javax.swing import JScrollPane
+from javax.swing.filechooser import FileNameExtensionFilter
+
+from com.williballenthin.rejistry import RegistryHiveFile
+from com.williballenthin.rejistry import RegistryKey
+from com.williballenthin.rejistry import RegistryParseException
+from com.williballenthin.rejistry import RegistryValue
+
+from java.io import File
+from java.lang import Class
 from java.lang import System
+from java.sql  import DriverManager, SQLException
 from java.util.logging import Level
+from java.util import Arrays
 from org.sleuthkit.datamodel import SleuthkitCase
 from org.sleuthkit.datamodel import AbstractFile
-from org.sleuthkit.datamodel import Score
 from org.sleuthkit.datamodel import ReadContentInputStream
 from org.sleuthkit.datamodel import BlackboardArtifact
 from org.sleuthkit.datamodel import BlackboardAttribute
+from org.sleuthkit.datamodel import Blackboard
+from org.sleuthkit.datamodel import TskData
 from org.sleuthkit.autopsy.ingest import IngestModule
 from org.sleuthkit.autopsy.ingest.IngestModule import IngestModuleException
 from org.sleuthkit.autopsy.ingest import DataSourceIngestModule
-from org.sleuthkit.autopsy.ingest import FileIngestModule
 from org.sleuthkit.autopsy.ingest import IngestModuleFactoryAdapter
+from org.sleuthkit.autopsy.ingest import GenericIngestModuleJobSettings
+from org.sleuthkit.autopsy.ingest import IngestModuleIngestJobSettingsPanel
 from org.sleuthkit.autopsy.ingest import IngestMessage
 from org.sleuthkit.autopsy.ingest import IngestServices
+from org.sleuthkit.autopsy.ingest import ModuleDataEvent
 from org.sleuthkit.autopsy.coreutils import Logger
+from org.sleuthkit.autopsy.coreutils import PlatformUtil
 from org.sleuthkit.autopsy.casemodule import Case
 from org.sleuthkit.autopsy.casemodule.services import Services
 from org.sleuthkit.autopsy.casemodule.services import FileManager
-from org.sleuthkit.autopsy.casemodule.services import Blackboard
-from org.sleuthkit.datamodel import Score
-from java.util import Arrays
+from org.sleuthkit.autopsy.datamodel import ContentUtils
+from org.sleuthkit.autopsy.modules.interestingitems import 
 
 # Factory that defines the name and details of the module and allows Autopsy
 # to create instances of the modules that will do the analysis.
-# TODO: Rename this to something more specific. Search and replace for it because it is used a few times
 class AutoRunsModuleFactory(IngestModuleFactoryAdapter):
+
+    def __init__(self):
+        self.settings = None
 
     # TODO: give it a unique name.  Will be shown in module list, logs, etc.
     moduleName = "Autoruns"
@@ -67,31 +93,42 @@ class AutoRunsModuleFactory(IngestModuleFactoryAdapter):
     def getModuleDisplayName(self):
         return self.moduleName
 
-    # TODO: Give it a description
     def getModuleDescription(self):
         return "Looks at Auto-Start Extensibility Points (ASEP) and list out potential persistence"
 
     def getModuleVersionNumber(self):
         return "1.0"
 
+    def getDefaultIngestJobSettings(self):
+        return GenericIngestModuleJobSettings()
+
+    def hasIngestJobSettingsPanel(self):
+        return True
+
+    # TODO: Update class names to ones that you create below
+    def getIngestJobSettingsPanel(self, settings):
+        if not isinstance(settings, GenericIngestModuleJobSettings):
+            raise IllegalArgumentException("Expected settings argument to be instanceof GenericIngestModuleJobSettings")
+        self.settings = settings
+        return AutorunsWithUISettingsPanel(self.settings)
+
     def isDataSourceIngestModuleFactory(self):
         return True
 
     def createDataSourceIngestModule(self, ingestOptions):
-        # TODO: Change the class name to the name you'll make below
         return AutoRunsIngestModule()
 
 
 # Data Source-level ingest module.  One gets created per data source.
-# TODO: Rename this to something more specific. Could just remove "Factory" from above name.
 class AutoRunsIngestModule(DataSourceIngestModule):
     _logger = Logger.getLogger(AutoRunsModuleFactory.moduleName)
 
     def log(self, level, msg):
         self._logger.logp(level, self.__class__.__name__, inspect.stack()[1][3], msg)
 
-    def __init__(self):
+    def __init__(self, settings):
         self.context = None
+        self.local_settings = settings
 
     # Where any setup and configuration is done
     # 'context' is an instance of org.sleuthkit.autopsy.ingest.IngestJobContext.
@@ -99,150 +136,406 @@ class AutoRunsIngestModule(DataSourceIngestModule):
     # TODO: Add any setup code that you need here.
     def startUp(self, context):
         
-        # Throw an IngestModule.IngestModuleException exception if there was a problem setting up
-        # raise IngestModuleException("Oh No!")
         self.context = context
+
         # Hive Keys to parse, use / as it is easier to parse out then \\
-        
-        # HKLM\Software\
-        self.registrySoftwareRunKeys = (
-            'Microsoft/Windows/CurrentVersion/Run', 
-            'Microsoft/Windows/CurrentVersion/RunOnce',
-            'Microsoft/Windows/CurrentVersion/RunServices',
-            'Microsoft/Windows/CurrentVersion/Policies/Explorer/Run',
-            'WOW6432Node/Microsoft/Windows/CurrentVersion/Run',
-            'WOW6432Node/Microsoft/Windows/CurrentVersion/RunOnce',
-            'WOW6432Node/Microsoft/Windows/CurrentVersion/Policies/Explorer/Run',
-            'Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/Run',
-            'Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnce',
-            'Microsoft/Windows NT/CurrentVersion/Image File Execution Options',
-            'Classes/CLSID',
-            'Microsoft/Windows NT/CurrentVersion/AppCombatFlags',
-            'Windows/CurrentVersion/Explorer/Browser Helper Objects'
-        )
 
-        # HKCU\
-        self.registryNTUserRunKeys = (
-            'Software/Microsoft/Windows/CurrentVersion/Run', 
-            'Software/Microsoft/Windows/CurrentVersion/RunOnce',
-            'Software/Microsoft/Windows/CurrentVersion/RunServices',
-            'Software/Microsoft/Windows/CurrentVersion/RunServicesOnce',
-            'Software/Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/Run',
-            'Software/Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnce',
-            'Software/Microsoft/Windows NT/CurrentVersion/Run',
-            'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/Policies/Explorer/Run',
-            'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/Run',
-            'Software/Classes/Applications',
-            'Software/Classes/CLSID'
-        )
+        if self.local_settings.getSetting('Registry_Runs') == 'true':
+            self.log(Level.INFO, "Registry Runs ==> " + str(self.local_settings.getSetting('Registry_Runs')))
+            
+            # HKLM\Software\
+            self.registrySoftwareRunKeys = (
+                'Microsoft/Windows/CurrentVersion/Run', 
+                'Microsoft/Windows/CurrentVersion/RunOnce',
+                'Microsoft/Windows/CurrentVersion/RunServices',
+                'Microsoft/Windows/CurrentVersion/Policies/Explorer/Run',
+                'WOW6432Node/Microsoft/Windows/CurrentVersion/Run',
+                'WOW6432Node/Microsoft/Windows/CurrentVersion/RunOnce',
+                'WOW6432Node/Microsoft/Windows/CurrentVersion/Policies/Explorer/Run',
+                'Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/Run',
+                'Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnce',
+                'Microsoft/Windows NT/CurrentVersion/Image File Execution Options',
+                'Classes/CLSID',
+                'Microsoft/Windows NT/CurrentVersion/AppCombatFlags',
+                'Windows/CurrentVersion/Explorer/Browser Helper Objects'
+            )
 
-        # Winlogon & AppInit
-        self.registryWinlogonAppinit = (
-            'Microsoft/Windows NT/CurrentVersion/Winlogon',  # Value AppInit_DLLs
-            'Microsoft/Windows NT/CurrentVersion/Winlogon/Notify',
-            'Microsoft/Windows NT/CurrentVersion/Winlogon/Userinit',
-            'Microsoft/Windows NT/CurrentVersion/Winlogon/VmApplet',
-            'Microsoft/Windows NT/CurrentVersion/Winlogon/Shell',
-            'Microsoft/Windows NT/CurrentVersion/Winlogon/TaskMan',
-            'Microsoft/Windows NT/CurrentVersion/Winlogon/System'
-        )
+            # HKCU\
+            self.registryNTUserRunKeys = (
+                'Software/Microsoft/Windows/CurrentVersion/Run', 
+                'Software/Microsoft/Windows/CurrentVersion/RunOnce',
+                'Software/Microsoft/Windows/CurrentVersion/RunServices',
+                'Software/Microsoft/Windows/CurrentVersion/RunServicesOnce',
+                'Software/Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/Run',
+                'Software/Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnce',
+                'Software/Microsoft/Windows NT/CurrentVersion/Run',
+                'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/Policies/Explorer/Run',
+                'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/Run',
+                'Software/Classes/Applications',
+                'Software/Classes/CLSID'
+            )
+        if self.local_settings.getSetting('Winlogon') == 'true':
+            self.log(Level.INFO, "Winlogon ==> " + str(self.local_settings.getSetting('Winlogon')))
+         
+            # Winlogon & AppInit
+            self.registryWinlogonAppinit = (
+                'Microsoft/Windows NT/CurrentVersion/Winlogon',  # Value AppInit_DLLs
+                'Microsoft/Windows NT/CurrentVersion/Winlogon/Notify',
+                'Microsoft/Windows NT/CurrentVersion/Winlogon/Userinit',
+                'Microsoft/Windows NT/CurrentVersion/Winlogon/VmApplet',
+                'Microsoft/Windows NT/CurrentVersion/Winlogon/Shell',
+                'Microsoft/Windows NT/CurrentVersion/Winlogon/TaskMan',
+                'Microsoft/Windows NT/CurrentVersion/Winlogon/System'
+            )
 
-        # Services
-        self.registryServices = (
-            'CurrentControlSet/Services'
-        )
+        if self.local_settings.getSetting('Services') == 'true':
+            self.log(Level.INFO, "Services ==> " + str(self.local_settings.getSetting('Services')))
 
-        # Scheduled Tasks
-        self.FileSystemScheduledTasks = (
-            'C:\\Windows\\System32\\Tasks'
-        )
+            # Services
+            self.registryServices = (
+                'CurrentControlSet/Services'
+            )
 
-        # Active Setup
-        self.registryActiveSetup = (
-            'Microsoft/Active Setup/Installed Components'
-        )
+        if self.local_settings.getSetting('Scheduled_Tasks') == 'true':
+            self.log(Level.INFO, "Scheduled Tasks ==> " + str(self.local_settings.getSetting('Scheduled_Tasks')))
 
-        # Microsoft Fix-it
-        self.registryFixit = (
-            'Microsoft/Windows NT/CurrentVersion/AppCompatFlags/InstalledSDB'
-        )
+            # Scheduled Tasks
+            self.FileSystemScheduledTasks = (
+                'C:\\Windows\\System32\\Tasks'
+            )
 
-        # Startup folder
-        self.startupProgram = (
-            'Microsoft/Windows/Start Menu/Programs/Startup'     # Different root folder, same subpath
-        )
+        if self.local_settings.getSetting('Active_Setup') == 'true':
+            self.log(Level.INFO, "Active Setup ==> " + str(self.local_settings.getSetting('Active_Setup')))
 
-        # HKCR CLSID
-        self.CLSID = (
-            'CLSID'
-        )
+            # Active Setup
+            self.registryActiveSetup = (
+                'Microsoft/Active Setup/Installed Components'
+            )
 
+        if self.local_settings.getSetting('Registry_Fixit') == 'true':
+            self.log(Level.INFO, "Registry Fix-it ==> " + str(self.local_settings.getSetting('Registry_Fixit')))
+
+            # Microsoft Fix-it
+            self.registryFixit = (
+                'Microsoft/Windows NT/CurrentVersion/AppCompatFlags/InstalledSDB'
+            )
+
+        if self.local_settings.getSetting('Startup_Program') == 'true':
+            self.log(Level.INFO, "Startup Program ==> " + str(self.local_settings.getSetting('Startup_Program')))
+
+            # Startup folder
+            self.startupProgram = (
+                'Microsoft/Windows/Start Menu/Programs/Startup'     # Different root folder, same subpath
+            )
+
+        if self.local_settings.getSetting('CLSID') == 'true':
+            self.log(Level.INFO, "CLSID ==> " + str(self.local_settings.getSetting('CLSID')))
+
+            # HKCR CLSID
+            self.CLSID = (
+                'CLSID'
+            )
 
     # Where the analysis is done.
     # The 'dataSource' object being passed in is of type org.sleuthkit.datamodel.Content.
     # See: http://www.sleuthkit.org/sleuthkit/docs/jni-docs/latest/interfaceorg_1_1sleuthkit_1_1datamodel_1_1_content.html
     # 'progressBar' is of type org.sleuthkit.autopsy.ingest.DataSourceIngestModuleProgress
     # See: http://sleuthkit.org/autopsy/docs/api-docs/latest/classorg_1_1sleuthkit_1_1autopsy_1_1ingest_1_1_data_source_ingest_module_progress.html
-    # TODO: Add your analysis code in here.
     def process(self, dataSource, progressBar):
+
+        self.log(Level.INFO, "Starting to process persistent keys")
 
         # we don't know how much work there is yet
         progressBar.switchToIndeterminate()
 
-        # Use blackboard class to index blackboard artifacts for keyword search
-        blackboard = Case.getCurrentCase().getSleuthkitCase().getBlackboard()
+        # Registry Runs
+        if self.local_settings.getSetting('Registry_Runs') == 'true':
+            progressBar.progress("Processing Registry Run Keys")
+            self.process_Registry_Runs(dataSource, progressBar)
 
-        # For our example, we will use FileManager to get all
-        # files with the word "test"
-        # in the name and then count and read them
-        # FileManager API: http://sleuthkit.org/autopsy/docs/api-docs/latest/classorg_1_1sleuthkit_1_1autopsy_1_1casemodule_1_1services_1_1_file_manager.html
-        fileManager = Case.getCurrentCase().getServices().getFileManager()
-        files = fileManager.findFiles(dataSource, "%test%")
+            message = IngestMessage.createMessage(IngestMessage.MessageType.DATA,
+                "Autoruns", " Registry Run Has Been Analyzed " )
+            IngestServices.getInstance().postMessage(message)
 
-        numFiles = len(files)
-        self.log(Level.INFO, "found " + str(numFiles) + " files")
-        progressBar.switchToDeterminate(numFiles)
-        fileCount = 0
-        for file in files:
+        # WinLogon
+        if self.local_settings.getSetting('Winlogon') == 'true':
+            progressBar.progress("Processing Winlogon Keys")
+            self.process_Winlogon(dataSource, progressBar)
 
-            # Check if the user pressed cancel while we were busy
-            if self.context.isJobCancelled():
-                return IngestModule.ProcessResult.OK
+            message = IngestMessage.createMessage(IngestMessage.MessageType.DATA,
+                "Autoruns", " Winlogon Has Been Analyzed " )
+            IngestServices.getInstance().postMessage(message)
 
-            self.log(Level.INFO, "Processing file: " + file.getName())
-            fileCount += 1
+        # Services
+        if self.local_settings.getSetting('Services') == 'true':
+            progressBar.progress("Processing Services")
+            self.process_Services(dataSource, progressBar)
 
-            # Make an artifact on the blackboard.  TSK_INTERESTING_FILE_HIT is a generic type of
-            # artfiact.  Refer to the developer docs for other examples.
-            attrs = Arrays.asList(BlackboardAttribute(BlackboardAttribute.Type.TSK_SET_NAME,
-                                                      AutoRunsModuleFactory.moduleName,
-                                                      "Test file"))
-            art = file.newAnalysisResult(BlackboardArtifact.Type.TSK_INTERESTING_FILE_HIT, Score.SCORE_LIKELY_NOTABLE,
-                                         None, "Test file", None, attrs).getAnalysisResult()
+            message = IngestMessage.createMessage(IngestMessage.MessageType.DATA,
+                "Autoruns", " Services Has Been Analyzed " )
+            IngestServices.getInstance().postMessage(message)
 
-            try:
-                # post the artifact for listeners of artifact events.
-                blackboard.postArtifact(art, AutoRunsModuleFactory.moduleName)
-            except Blackboard.BlackboardException as e:
-                self.log(Level.SEVERE, "Error indexing artifact " + art.getDisplayName())
+        # Scheduled Tasks
+        if self.local_settings.getSetting('Scheduled_Tasks') == 'true':
+            progressBar.progress("Processing Scheduled Tasks")
+            self.process_Scheduled_Tasks(dataSource, progressBar)
 
-            # To further the example, this code will read the contents of the file and count the number of bytes
-            inputStream = ReadContentInputStream(file)
-            buffer = jarray.zeros(1024, "b")
-            totLen = 0
-            readLen = inputStream.read(buffer)
-            while (readLen != -1):
-                totLen = totLen + readLen
-                readLen = inputStream.read(buffer)
+            message = IngestMessage.createMessage(IngestMessage.MessageType.DATA,
+                "Autoruns", " Scheduled Tasks Has Been Analyzed " )
+            IngestServices.getInstance().postMessage(message)
 
+        # Active Setup
+        if self.local_settings.getSetting('Active_Setup') == 'true':
+            progressBar.progress("Processing Active Setup")
+            self.process_Active_Setup(dataSource, progressBar)
 
-            # Update the progress bar
-            progressBar.progress(fileCount)
+            message = IngestMessage.createMessage(IngestMessage.MessageType.DATA,
+                "Autoruns", " Active Setup Has Been Analyzed " )
+            IngestServices.getInstance().postMessage(message)
 
+        # Microsoft Fix-it
+        if self.local_settings.getSetting('Registry_Fixit') == 'true':
+            progressBar.progress("Processing Microsoft Fix-it")
+            self.process_Registry_Fixit(dataSource, progressBar)
 
-        #Post a message to the ingest messages in box.
+            message = IngestMessage.createMessage(IngestMessage.MessageType.DATA,
+                "Autoruns", " Registry Fixit Has Been Analyzed " )
+            IngestServices.getInstance().postMessage(message)
+
+        # Startup Program
+        if self.local_settings.getSetting('Startup_Program') == 'true':
+            progressBar.progress("Processing Startup Program")
+            self.process_Startup_Program(dataSource, progressBar)
+
+            message = IngestMessage.createMessage(IngestMessage.MessageType.DATA,
+                "Autoruns", " Startup Program Has Been Analyzed " )
+            IngestServices.getInstance().postMessage(message)
+
+        # CLSID
+        if self.local_settings.getSetting('CLSID') == 'true':
+            progressBar.progress("Processing CLSID")
+            self.process_CLSID(dataSource, progressBar)
+
+            message = IngestMessage.createMessage(IngestMessage.MessageType.DATA,
+                "Autoruns", " CLSID Has Been Analyzed " )
+            IngestServices.getInstance().postMessage(message)
+
+         # After all databases, post a message to the ingest messages in box.
         message = IngestMessage.createMessage(IngestMessage.MessageType.DATA,
-            "Sample Jython Data Source Ingest Module", "Found %d files" % fileCount)
+            "Autoruns", " Autoruns Has Been Analyzed " )
         IngestServices.getInstance().postMessage(message)
 
         return IngestModule.ProcessResult.OK
+
+    # TODO: Write process_Registry_Runs
+    def process_Registry_Runs(self, dataSource, progressBar):
+        pass
+
+    # TODO: Write process_Winlogon
+    def process_Winlogon(self, dataSource, progressBar):
+        pass
+
+    # TODO: Write process_Services
+    def process_Services(self, dataSource, progressBar):
+        pass
+
+    # TODO: Write process_Scheduled_Tasks
+    def process_Scheduled_Tasks(self, dataSource, progressBar):
+        pass
+
+    # TODO: Write process_Active_Setup
+    def process_Active_Setup(self, dataSource, progressBar):
+        pass
+
+    # TODO: Write process_Registry_Fixit
+    def process_Registry_Fixit(self, dataSource, progressBar):
+        pass
+
+    # TODO: Write process_Startup_Program
+    def process_Startup_Program(self, dataSource, progressBar):
+        pass
+
+    # TODO: Write process_CLSID
+    def process_CLSID(self, dataSource, progressBar):
+        pass
+
+
+
+# UI that is shown to user for each ingest job so they can configure the job.
+class AutorunsWithUISettingsPanel(IngestModuleIngestJobSettingsPanel):
+    # Note, we can't use a self.settings instance variable.
+    # Rather, self.local_settings is used.
+    # https://wiki.python.org/jython/UserGuide#javabean-properties
+    # Jython Introspector generates a property - 'settings' on the basis
+    # of getSettings() defined in this class. Since only getter function
+    # is present, it creates a read-only 'settings' property. This auto-
+    # generated read-only property overshadows the instance-variable -
+    # 'settings'
+    
+    # We get passed in a previous version of the settings so that we can
+    # prepopulate the UI
+    def __init__(self, settings):
+        self.local_settings = settings
+        self.initComponents()
+        self.customizeComponents()
+    
+    def checkBoxEvent(self, event):
+
+        if self.RegistryRuns_CB.isSelected():
+            self.local_settings.setSetting('Registry_Runs', 'true')
+        else:
+            self.local_settings.setSetting('Registry_Runs', 'false')
+
+        if self.Winlogon_CB.isSelected():
+            self.local_settings.setSetting('Winlogon', 'true')
+        else:
+            self.local_settings.setSetting('Winlogon', 'false')
+
+        if self.Services_CB.isSelected():
+            self.local_settings.setSetting('Services', 'true')
+        else:
+            self.local_settings.setSetting('Services', 'false')
+
+        if self.ScheduledTasks_CB.isSelected():
+            self.local_settings.setSetting('Scheduled_Tasks', 'true')
+        else:
+            self.local_settings.setSetting('Scheduled_Tasks', 'false')
+
+        if self.ActiveSetup_CB.isSelected():
+            self.local_settings.setSetting('Active_Setup', 'true')
+        else:
+            self.local_settings.setSetting('Active_Setup', 'false')
+
+        if self.Fixit_CB.isSelected():
+            self.local_settings.setSetting('Registry_Fixit', 'true')
+        else:
+            self.local_settings.setSetting('Registry_Fixit', 'false')
+
+        if self.Startup_CB.isSelected():
+            self.local_settings.setSetting('Startup_Program', 'true')
+        else:
+            self.local_settings.setSetting('Startup_Program', 'false')
+
+        if self.CLSID_CB.isSelected():
+            self.local_settings.setSetting('CLSID', 'true')
+        else:
+            self.local_settings.setSetting('CLSID', 'false')
+
+    def initComponents(self):
+        self.panel0 = JPanel()
+
+        self.gbPanel0 = GridBagLayout() 
+        self.gbcPanel0 = GridBagConstraints() 
+        self.panel0.setLayout( self.gbPanel0 ) 
+
+        self.RegistryRuns_CB = JCheckBox( "Registry Runs", actionPerformed=self.checkBoxEvent) 
+        self.gbcPanel0.gridx = 2 
+        self.gbcPanel0.gridy = 5
+        self.gbcPanel0.gridwidth = 1 
+        self.gbcPanel0.gridheight = 1 
+        self.gbcPanel0.fill = GridBagConstraints.BOTH 
+        self.gbcPanel0.weightx = 1 
+        self.gbcPanel0.weighty = 0 
+        self.gbcPanel0.anchor = GridBagConstraints.NORTH 
+        self.gbPanel0.setConstraints( self.RegistryRuns_CB, self.gbcPanel0 ) 
+        self.panel0.add( self.RegistryRuns_CB ) 
+
+        self.Winlogon_CB = JCheckBox( "Winlogon", actionPerformed=self.checkBoxEvent) 
+        self.gbcPanel0.gridx = 2 
+        self.gbcPanel0.gridy = 7 
+        self.gbcPanel0.gridwidth = 1 
+        self.gbcPanel0.gridheight = 1 
+        self.gbcPanel0.fill = GridBagConstraints.BOTH 
+        self.gbcPanel0.weightx = 1 
+        self.gbcPanel0.weighty = 0 
+        self.gbcPanel0.anchor = GridBagConstraints.NORTH 
+        self.gbPanel0.setConstraints( self.Winlogon_CB, self.gbcPanel0 ) 
+        self.panel0.add( self.Winlogon_CB ) 
+
+        self.Services_CB = JCheckBox( "Services", actionPerformed=self.checkBoxEvent) 
+        self.gbcPanel0.gridx = 2 
+        self.gbcPanel0.gridy = 9 
+        self.gbcPanel0.gridwidth = 1 
+        self.gbcPanel0.gridheight = 1 
+        self.gbcPanel0.fill = GridBagConstraints.BOTH 
+        self.gbcPanel0.weightx = 1 
+        self.gbcPanel0.weighty = 0 
+        self.gbcPanel0.anchor = GridBagConstraints.NORTH 
+        self.gbPanel0.setConstraints( self.Services_CB, self.gbcPanel0 ) 
+        self.panel0.add( self.Services_CB ) 
+
+        self.ScheduledTasks_CB = JCheckBox( "Scheduled Tasks", actionPerformed=self.checkBoxEvent) 
+        self.gbcPanel0.gridx = 2 
+        self.gbcPanel0.gridy = 11 
+        self.gbcPanel0.gridwidth = 1 
+        self.gbcPanel0.gridheight = 1 
+        self.gbcPanel0.fill = GridBagConstraints.BOTH 
+        self.gbcPanel0.weightx = 1 
+        self.gbcPanel0.weighty = 0 
+        self.gbcPanel0.anchor = GridBagConstraints.NORTH 
+        self.gbPanel0.setConstraints( self.ScheduledTasks_CB, self.gbcPanel0 ) 
+        self.panel0.add( self.ScheduledTasks_CB ) 
+
+        self.ActiveSetup_CB = JCheckBox( "Active Setup", actionPerformed=self.checkBoxEvent) 
+        self.gbcPanel0.gridx = 2 
+        self.gbcPanel0.gridy = 13 
+        self.gbcPanel0.gridwidth = 1 
+        self.gbcPanel0.gridheight = 1 
+        self.gbcPanel0.fill = GridBagConstraints.BOTH 
+        self.gbcPanel0.weightx = 1 
+        self.gbcPanel0.weighty = 0 
+        self.gbcPanel0.anchor = GridBagConstraints.NORTH 
+        self.gbPanel0.setConstraints( self.ActiveSetup_CB, self.gbcPanel0 ) 
+        self.panel0.add( self.ActiveSetup_CB ) 
+
+        self.Fixit_CB = JCheckBox( "Microsoft Fix-it", actionPerformed=self.checkBoxEvent) 
+        self.gbcPanel0.gridx = 2 
+        self.gbcPanel0.gridy = 15 
+        self.gbcPanel0.gridwidth = 1 
+        self.gbcPanel0.gridheight = 1 
+        self.gbcPanel0.fill = GridBagConstraints.BOTH 
+        self.gbcPanel0.weightx = 1 
+        self.gbcPanel0.weighty = 0 
+        self.gbcPanel0.anchor = GridBagConstraints.NORTH 
+        self.gbPanel0.setConstraints( self.Fixit_CB, self.gbcPanel0 ) 
+        self.panel0.add( self.Fixit_CB ) 
+
+        self.Startup_CB = JCheckBox( "Startup Program", actionPerformed=self.checkBoxEvent) 
+        self.gbcPanel0.gridx = 2 
+        self.gbcPanel0.gridy = 17 
+        self.gbcPanel0.gridwidth = 1 
+        self.gbcPanel0.gridheight = 1 
+        self.gbcPanel0.fill = GridBagConstraints.BOTH 
+        self.gbcPanel0.weightx = 1 
+        self.gbcPanel0.weighty = 0 
+        self.gbcPanel0.anchor = GridBagConstraints.NORTH 
+        self.gbPanel0.setConstraints( self.Startup_CB, self.gbcPanel0 ) 
+        self.panel0.add( self.Startup_CB ) 
+
+        self.CLSID_CB = JCheckBox( "CLSID", actionPerformed=self.checkBoxEvent) 
+        self.gbcPanel0.gridx = 2 
+        self.gbcPanel0.gridy = 19
+        self.gbcPanel0.gridwidth = 1 
+        self.gbcPanel0.gridheight = 1 
+        self.gbcPanel0.fill = GridBagConstraints.BOTH 
+        self.gbcPanel0.weightx = 1 
+        self.gbcPanel0.weighty = 0 
+        self.gbcPanel0.anchor = GridBagConstraints.NORTH 
+        self.gbPanel0.setConstraints( self.CLSID_CB, self.gbcPanel0 ) 
+        self.panel0.add( self.CLSID_CB ) 
+
+        self.add(self.panel0)
+
+    def customizeComponents(self):
+        self.RegistryRuns_CB.setSelected(self.local_settings.getSetting('Registry_Runs') == 'true')
+        self.Winlogon_CB.setSelected(self.local_settings.getSetting('Winlogon') == 'true')
+        self.Services_CB.setSelected(self.local_settings.getSetting('Services') == 'true')
+        self.ScheduledTasks_CB.setSelected(self.local_settings.getSetting('Scheduled_Tasks') == 'true')
+        self.ActiveSetup_CB.setSelected(self.local_settings.getSetting('Active_Setup') == 'true')
+        self.Fixit_CB.setSelected(self.local_settings.getSetting('Registry_Fixit') == 'true')
+        self.Startup_CB.setSelected(self.local_settings.getSetting('Startup_Program') == 'true')
+        self.CLSID_CB.setSelected(self.local_settings.getSetting('CLSID') == 'true')
+
+    # Return the settings used
+    def getSettings(self):
+        return self.local_settings

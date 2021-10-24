@@ -114,7 +114,11 @@ class AutoRunsIngestModule(DataSourceIngestModule):
             'WOW6432Node/Microsoft/Windows/CurrentVersion/RunOnce',
             'WOW6432Node/Microsoft/Windows/CurrentVersion/Policies/Explorer/Run',
             'Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/Run',
-            'Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnce'
+            'Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnce',
+            'Microsoft/Windows NT/CurrentVersion/Image File Execution Options',
+            'Classes/CLSID',
+            'Microsoft/Windows NT/CurrentVersion/AppCombatFlags',
+            'Windows/CurrentVersion/Explorer/Browser Helper Objects'
         )
 
         # HKCU\
@@ -127,38 +131,50 @@ class AutoRunsIngestModule(DataSourceIngestModule):
             'Software/Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnce',
             'Software/Microsoft/Windows NT/CurrentVersion/Run',
             'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/Policies/Explorer/Run',
-            'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/Run'
+            'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/Run',
+            'Software/Classes/Applications',
+            'Software/Classes/CLSID'
         )
 
         # Winlogon & AppInit
         self.registryWinlogonAppinit = (
-            'Microsoft\Windows NT\CurrentVersion\Winlogon',  # Value AppInit_DLLs
-            'Microsoft\Windows NT\CurrentVersion\Winlogon\Notify',
-            'Microsoft\Windows NT\CurrentVersion\Winlogon\Userinit',
-            'Microsoft\Windows NT\CurrentVersion\Winlogon\VmApplet',
-            'Microsoft\Windows NT\CurrentVersion\Winlogon\Shell',
-            'Microsoft\Windows NT\CurrentVersion\Winlogon\TaskMan',
-            'Microsoft\Windows NT\CurrentVersion\Winlogon\System'
+            'Microsoft/Windows NT/CurrentVersion/Winlogon',  # Value AppInit_DLLs
+            'Microsoft/Windows NT/CurrentVersion/Winlogon/Notify',
+            'Microsoft/Windows NT/CurrentVersion/Winlogon/Userinit',
+            'Microsoft/Windows NT/CurrentVersion/Winlogon/VmApplet',
+            'Microsoft/Windows NT/CurrentVersion/Winlogon/Shell',
+            'Microsoft/Windows NT/CurrentVersion/Winlogon/TaskMan',
+            'Microsoft/Windows NT/CurrentVersion/Winlogon/System'
         )
 
         # Services
         self.registryServices = (
-            'CurrentControlSet\Services'
+            'CurrentControlSet/Services'
         )
 
         # Scheduled Tasks
         self.FileSystemScheduledTasks = (
-            'C:\Windows\System32\Tasks\\'
+            'C:\Windows\System32\Tasks'
         )
 
         # Active Setup
         self.registryActiveSetup = (
-            'Microsoft\Active Setup\Installed Components'
+            'Microsoft/Active Setup/Installed Components'
         )
 
         # Microsoft Fix-it
         self.registryFixit = (
-            'Microsoft\Windows NT\CurrentVersion\AppCompatFlags\InstalledSDB'
+            'Microsoft/Windows NT/CurrentVersion/AppCompatFlags/InstalledSDB'
+        )
+
+        # Startup folder
+        self.startupProgram = (
+            'Microsoft/Windows/Start Menu/Programs/Startup'     # Different root folder, same subpath
+        )
+
+        # HKCR CLSID
+        self.CLSID = (
+            'CLSID'
         )
 
 

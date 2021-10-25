@@ -329,7 +329,161 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
     # TODO: Write process_Registry_Runs
     def process_Registry_Runs(self, dataSource, progressBar):
-        pass
+        
+        # we don't know how much work there is yet
+        progressBar.switchToIndeterminate()
+
+        # Hives files to extract
+        filesToExtract = ("NTUSER.DAT", "SOFTWARE")
+
+        # Create autoruns directory in temp directory, if it exists then continue on processing      
+        tempDir = os.path.join(Case.getCurrentCase().getTempDirectory(), "Autoruns")
+        self.log(Level.INFO, "create Directory " + tempDir)
+        try:
+            os.mkdir(tempDir)
+        except:
+            self.log(Level.INFO, "Autoruns Directory already exists " + tempDir)
+
+        # Set the database to be read to the once created by the prefetch parser program
+        skCase = Case.getCurrentCase().getSleuthkitCase()
+        blackboard = Case.getCurrentCase().getSleuthkitCase().getBlackboard()
+        fileManager = Case.getCurrentCase().getServices().getFileManager()
+
+        # Setup Artifact and Attributes
+        artType = skCase.getArtifactType("TSK_REGISTRY_RUN_KEYS")
+        if not artType:
+            try:
+                artType = skCase.addBlackboardArtifactType( "TSK_REGISTRY_RUN_KEYS", "Registry Run Keys")
+            except:     
+                self.log(Level.WARNING, "Artifacts Creation Error, some artifacts may not exist now. ==> ")
+
+        try:
+           attributeIdRunKeyName = skCase.addArtifactAttributeType(
+                "TSK_REG_RUN_KEY_NAME", 
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
+                "Run Key Name"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_REG_RUN_KEY_NAME, May already exist. ")
+        
+        try:
+           attributeIdRunKeyValue = skCase.addArtifactAttributeType(
+                "TSK_REG_RUN_KEY_VALUE", 
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
+                "Run Key Value"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_REG_RUN_KEY_VALUE, May already exist. ")
+        
+        try:
+           attributeIdRegKeyLoc = skCase.addArtifactAttributeType(
+                "TSK_REG_KEY_LOCATION", 
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
+                "Registry Key Location"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_REG_KEY_LOCATION, May already exist. ")
+
+        try:
+            attributeIdRegKeyUser = skCase.addArtifactAttributeType(
+                "TSK_REG_KEY_USER",
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                "User"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_REG_KEY_USER, May already exist. ")
+
+        attributeIdRunKeyName = skCase.getAttributeType("TSK_REG_RUN_KEY_NAME")
+        attributeIdRunKeyValue = skCase.getAttributeType("TSK_REG_RUN_KEY_VALUE")
+        attributeIdRegKeyLoc = skCase.getAttributeType("TSK_REG_KEY_LOCATION")
+        attributeIdRegKeyUser = skCase.getAttributeType("TSK_REG_KEY_USER")
+
+        moduleName = RegistryExampleIngestModuleFactory.moduleName
+
+        # Look for files to process
+        for fileName in filesToExtract:
+            files = fileManager.findFiles(dataSource, fileName)
+            numFiles = len(files)
+
+            for file in files:
+            
+                # Check if the user pressed cancel while we were busy
+                if self.context.isJobCancelled():
+                    return IngestModule.ProcessResult.OK
+
+                # Check path to only get the hive files in the config directory and no others
+                if ((file.getName() == 'SOFTWARE') and (file.getParentPath().upper() == '/WINDOWS/SYSTEM32/CONFIG/') and (file.getSize() > 0)):    
+                    # Save the file locally in the temp folder. 
+                    self.writeHiveFile(file, file.getName(), tempDir)
+                    
+                    # Process HKLM Software file looking thru the run keys
+                    user = "System"
+                    self.log(Level.INFO, "SOFTWARE hive exists, parsing it")
+                    
+                    regFileName = os.path.join(tempDir, file.getName())
+                    regFile = registryHiveFile(File(regFileName))
+
+                    for runKey in self.registrySoftwareRunKeys:
+                        self.log(Level.INFO, "Finding key: " + runKey)
+
+                        currentKey = self.findRegistryKey(regFile, runKey)
+                        if currentKey and Len(currentKey.getValueList()) > 0:
+                            skValues = currentKey.getValueList()
+
+                            for skValue in skValues:
+                                art = file.newDataArtifact(artType, Arrays.asList(
+                                    BlackboardAttribute(attributeIdRegKeyUser, moduleName, user)
+                                    BlackboardAttribute(attributeIdRegKeyLoc, moduleName, runKey)
+                                    BlackboardAttribute(attributeIdRunKeyName, moduleName, str(skValue.getName()))
+                                    BlackboardAttribute(attributeIdRunKeyName, moduleName, skValue.getValue().getAsString())
+                                ))
+
+
+                    
+                elif ((file.getName() == 'NTUSER.DAT') and ('/USERS' in file.getParentPath().upper()) and (file.getSize() > 0)):
+                # Found a NTUSER.DAT file to process only want files in User directories
+                    # Filename may not be unique so add file id to the name
+                    fileName = str(file.getId()) + "-" + file.getName()                    
+                    
+                    # Save the file locally in the temp folder.
+                    self.writeHiveFile(file, fileName, tempDir)
+
+                    # Process NTUSER.DAT file looking thru the run keys
+                    #self.processNTUserHive(os.path.join(tempDir, fileName), file)
+
+                    user = file.getParentPath().split('/')[2] 
+                    self.log(Level.INFO, "User \'" + user + "\' hive exists, parsing it")
+                    
+                    regFileName = os.path.join(tempDir, file.getName())
+                    regFile = registryHiveFile(File(regFileName))
+
+                    for runKey in self.registryNTUserRunKeys:
+                        self.log(Level.INFO, "Finding key: " + runKey)
+
+                        currentKey = self.findRegistryKey(regFile, runKey)
+                        if currentKey and Len(currentKey.getValueList()) > 0:
+                            skValues = currentKey.getValueList()
+
+                            for skValue in skValues:
+                                art = file.newDataArtifact(artType, Arrays.asList(
+                                    BlackboardAttribute(attributeIdRegKeyUser, moduleName, user)
+                                    BlackboardAttribute(attributeIdRegKeyLoc, moduleName, runKey)
+                                    BlackboardAttribute(attributeIdRunKeyName, moduleName, str(skValue.getName()))
+                                    BlackboardAttribute(attributeIdRunKeyName, moduleName, skValue.getValue().getAsString())
+                                ))
+
+                                # index the artifact for keyword search
+                                try:
+                                    blackboard.postArtifact(art, moduleName)
+                                except Blackboard.BlackboardException as ex:
+                                    self.log(Level.SEVERE, "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
+
+
+        #Clean up registryExample directory and files
+        try:
+            shutil.rmtree(tempDir)      
+        except:
+            self.log(Level.INFO, "removal of directory tree failed " + tempDir)
 
     # TODO: Write process_Winlogon
     def process_Winlogon(self, dataSource, progressBar):
@@ -359,7 +513,26 @@ class AutoRunsIngestModule(DataSourceIngestModule):
     def process_CLSID(self, dataSource, progressBar):
         pass
 
+    ####################
+    # Helper Functions #
+    ####################
+    def writeHiveFile(self, file, fileName, tempDir):
+        # Write the file to the temp directory.  
+        filePath = os.path.join(tempDir, fileName)
+        ContentUtils.writeToFile(file, File(filePath))
 
+    def findRegistryKey(self, registryHiveFile, registryKey):
+        # Search for the registry key
+        rootKey = registryHiveFile.getRoot()
+        regKeyList = registryKey.split('/')
+        currentKey = rootKey
+        try:
+            for key in regKeyList:
+                currentKey = currentKey.getSubkey(key) 
+            return currentKey
+        except:
+            self.log(Level.INFO, "Unable to parse key: " + key)
+            return None
 
 # UI that is shown to user for each ingest job so they can configure the job.
 class AutorunsWithUISettingsPanel(IngestModuleIngestJobSettingsPanel):

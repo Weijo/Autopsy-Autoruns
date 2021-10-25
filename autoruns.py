@@ -200,9 +200,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
             self.log(Level.INFO, "Scheduled Tasks ==> " + str(self.local_settings.getSetting('Scheduled_Tasks')))
 
             # Scheduled Tasks
-            self.FileSystemScheduledTasks = (
-                'C:\\Windows\\System32\\Tasks'
-            )
+            self.ScheduledTasksLoc = '/Windows/System32/Tasks'
 
         if self.local_settings.getSetting('Active_Setup') == 'true':
             self.log(Level.INFO, "Active Setup ==> " + str(self.local_settings.getSetting('Active_Setup')))
@@ -331,6 +329,8 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         
         # we don't know how much work there is yet
         progressBar.switchToIndeterminate()
+
+        progressBar.progress("Finding Registry Run Keys")
 
         # Hives files to extract
         filesToExtract = ("NTUSER.DAT", "SOFTWARE")
@@ -486,7 +486,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                                     self.log(Level.SEVERE, "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
 
 
-        #Clean up registryExample directory and files
+        #Clean up Autoruns directory and files
         try:
             shutil.rmtree(tempDir)      
         except:
@@ -502,7 +502,36 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
     # TODO: Write process_Scheduled_Tasks
     def process_Scheduled_Tasks(self, dataSource, progressBar):
-        pass
+
+        # we don't know how much work there is yet
+        progressBar.switchToIndeterminate()
+
+        progressBar.progress("Finding Scheduled Tasks")
+
+        # Set the database to be read to the once created by the prefetch parser program
+        skCase = Case.getCurrentCase().getSleuthkitCase()
+        blackboard = Case.getCurrentCase().getSleuthkitCase().getBlackboard()
+        fileManager = Case.getCurrentCase().getServices().getFileManager()
+
+        # Create autoruns directory in temp directory, if it exists then continue on processing      
+        tempDir = os.path.join(Case.getCurrentCase().getTempDirectory(), "Autoruns")
+        self.log(Level.INFO, "create Directory " + tempDir)
+        try:
+            os.mkdir(tempDir)
+        except:
+            self.log(Level.INFO, "Autoruns Directory already exists " + tempDir)
+
+        # Get Scheduled Task files
+        files = fileManager.findFiles(dataSource, "%", self.ScheduledTasksLoc)
+
+        for file in files:
+            self.log(Level.INFO, "Found file: " + file.getName())
+
+        #Clean up Autoruns directory and files
+        try:
+            shutil.rmtree(tempDir)      
+        except:
+            self.log(Level.INFO, "removal of directory tree failed " + tempDir)
 
     # TODO: Write process_Active_Setup
     def process_Active_Setup(self, dataSource, progressBar):

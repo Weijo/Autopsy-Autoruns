@@ -442,7 +442,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                                     BlackboardAttribute(attributeIdRegKeyUser, moduleName, user),
                                     BlackboardAttribute(attributeIdRegKeyLoc, moduleName, runKey),
                                     BlackboardAttribute(attributeIdRunKeyName, moduleName, str(skName)),
-                                    BlackboardAttribute(attributeIdRunKeyName, moduleName, skVal.getAsString())
+                                    BlackboardAttribute(attributeIdRunKeyValue, moduleName, skVal.getAsString())
                                 ))
 
 

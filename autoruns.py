@@ -80,6 +80,9 @@ from org.sleuthkit.autopsy.casemodule.services import FileManager
 from org.sleuthkit.autopsy.datamodel import ContentUtils
 from org.sleuthkit.autopsy.modules.interestingitems import FilesSetsManager
 
+import json
+import winjob
+
 # Factory that defines the name and details of the module and allows Autopsy
 # to create instances of the modules that will do the analysis.
 class AutoRunsModuleFactory(IngestModuleFactoryAdapter):
@@ -522,10 +525,26 @@ class AutoRunsIngestModule(DataSourceIngestModule):
             self.log(Level.INFO, "Autoruns Directory already exists " + tempDir)
 
         # Get Scheduled Task files
-        files = fileManager.findFiles(dataSource, "%", self.ScheduledTasksLoc)
+        filesTemp = fileManager.findFiles(dataSource, "%", self.ScheduledTasksLoc)
 
-        for file in files:
-            self.log(Level.INFO, "Found file: " + file.getName())
+        files = []
+
+        for file in filesTemp:
+            if (not file.isDir()):
+                self.log(Level.INFO, "Working on: " + file.getName())
+
+                files.append(file)
+
+                # Save the file locally in the temp folder.
+                self.writeHiveFile(file, file.getName(), tempDir)
+
+                filePath = os.path.join(tempDir, file.getName())
+                with open(filePath, 'r') as fd:
+                    task = winjob.read_task(fd.read())
+
+                if task != None:
+                    self.log(Level.INFO, "Details of " + file.getName() + " " + json.dumps(task.parse(), indent=2))
+
 
         #Clean up Autoruns directory and files
         try:

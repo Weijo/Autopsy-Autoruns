@@ -482,7 +482,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                                     BlackboardAttribute(attributeIdRegKeyUser, moduleName, user),
                                     BlackboardAttribute(attributeIdRegKeyLoc, moduleName, runKey),
                                     BlackboardAttribute(attributeIdRunKeyName, moduleName, str(skName)),
-                                    BlackboardAttribute(attributeIdRunKeyName, moduleName, skVal.getAsString())
+                                    BlackboardAttribute(attributeIdRunKeyValue, moduleName, skVal.getAsString())
                                 ))
 
                                 # index the artifact for keyword search
@@ -527,26 +527,117 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         except:
             self.log(Level.INFO, "Autoruns Directory already exists " + tempDir)
 
+
+        # Setup Artifact and Attributes
+        artType = skCase.getArtifactType("TSK_SCHEDULED_TASKS")
+        if not artType:
+            try:
+                artType = skCase.addBlackboardArtifactType( "TSK_SCHEDULED_TASKS", "Scheduled Tasks")
+            except:     
+                self.log(Level.WARNING, "Artifacts Creation Error, some artifacts may not exist now. ==> ")
+
+        try:
+            attributeIdScheduledTasksURI = skCase.addArtifactAttributeType(
+                "TSK_SCHEDULED_TASKS_URI",
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                "URI"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_URI, May already exist. ")
+
+        try:
+            attributeIdScheduledTasksStatus = skCase.addArtifactAttributeType(
+                "TSK_SCHEDULED_TASKS_STATUS",
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                "Status"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_STATUS, May already exist. ")
+
+        try:
+           attributeIdScheduledTasksCommand = skCase.addArtifactAttributeType(
+                "TSK_SCHEDULED_TASKS_COMMAND", 
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
+                "Command"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_COMMAND, May already exist. ")
+        
+        try:
+           attributeIdScheduledTasksTrigger = skCase.addArtifactAttributeType(
+                "TSK_SCHEDULED_TASKS_TRIGGER", 
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
+                "Trigger"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_TRIGGER, May already exist. ")
+        
+        try:
+           attributeIdScheduledTasksDump = skCase.addArtifactAttributeType(
+                "TSK_SCHEDULED_TASKS_DUMP", 
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
+                "Dump"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_DUMP, May already exist. ")
+
+        attributeIdScheduledTasksURI = skCase.getAttributeType("TSK_SCHEDULED_TASKS_URI")
+        attributeIdScheduledTasksStatus = skCase.getAttributeType("TSK_SCHEDULED_TASKS_STATUS")
+        attributeIdScheduledTasksCommand = skCase.getAttributeType("TSK_SCHEDULED_TASKS_COMMAND")
+        attributeIdScheduledTasksTrigger = skCase.getAttributeType("TSK_SCHEDULED_TASKS_TRIGGER")
+        attributeIdScheduledTasksDump = skCase.getAttributeType("TSK_SCHEDULED_TASKS_DUMP")
+
+        moduleName = AutoRunsModuleFactory.moduleName
+
+
+
         # Get Scheduled Task files
         filesTemp = fileManager.findFiles(dataSource, "%", self.ScheduledTasksLoc)
 
-        files = []
-
         for file in filesTemp:
             if (not file.isDir()):
-                self.log(Level.INFO, "Working on: " + file.getName())
-
-                files.append(file)
+                #self.log(Level.INFO, "Working on: "  + file.getParentPath() + file.getName())
 
                 # Save the file locally in the temp folder.
                 self.writeHiveFile(file, file.getName(), tempDir)
 
+                # Attempt to parse task xml
                 filePath = os.path.join(tempDir, file.getName())
                 with open(filePath, 'r') as fd:
                     task = winjob.read_task(fd.read())
 
+                # Check if parse worked
                 if task != None:
-                    self.log(Level.INFO, "Details of " + file.getName() + " " + json.dumps(task.parse(), indent=2))
+                    #self.log(Level.INFO, "Details of " + file.getName() + " " + json.dumps(task.parse(), indent=2))
+                    data = task.parse()
+
+                    uri = data["uri"]
+                    enabled = data["triggers"][0]["Enabled"] if data["triggers"] else ""
+                    command = data["actions"][0]["Command"] if "Command" in data["actions"][0] else ""
+                    trigger = data["triggers"][0]["Type"] if data["triggers"] else ""
+
+                    status = "Enabled" if enabled == "true" else "Disabled" if enabled == "false" else "" 
+
+                    # self.log(Level.INFO, "File: " + file.getName() +  
+                    #     "\nURI: " + uri + 
+                    #     "\nStatus: " + status +
+                    #     "\nCommand: " + command + 
+                    #     "\nTrigger: " + trigger
+                    # )
+
+                    art = file.newDataArtifact(artType, Arrays.asList(
+                        BlackboardAttribute(attributeIdScheduledTasksURI, moduleName, uri),
+                        BlackboardAttribute(attributeIdScheduledTasksStatus, moduleName, status),
+                        BlackboardAttribute(attributeIdScheduledTasksCommand, moduleName, command),
+                        BlackboardAttribute(attributeIdScheduledTasksTrigger, moduleName, trigger),
+                        BlackboardAttribute(attributeIdScheduledTasksDump, moduleName, json.dumps(task.parse(), indent=2))
+                    ))
+
+                    # index the artifact for keyword search
+                    try:
+                        blackboard.postArtifact(art, moduleName)
+                    except Blackboard.BlackboardException as ex:
+                        self.log(Level.SEVERE, "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
 
 
         #Clean up Autoruns directory and files

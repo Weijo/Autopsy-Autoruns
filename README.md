@@ -24,7 +24,13 @@ You'll see the ingest module when you do Tool > Run Ingest Module
 ## Log location
 Help > Open Log Folder
 
-Probably not
+autopsy.log.0 is the current running log
+
+## Debugging notes
+
+Always check the log
+
+if you encounter an error whereby the program crashes, high chance whatever file actions you were doing will be locked causing the second instance to create a temp file to fail. To solve this, you need to close and re-open autopsy.
 
 ## References
 - Installing Python Module (http://sleuthkit.org/autopsy/docs/user-docs/4.19.2/module_install_page.html)

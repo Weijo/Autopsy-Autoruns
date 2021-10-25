@@ -358,6 +358,15 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 self.log(Level.WARNING, "Artifacts Creation Error, some artifacts may not exist now. ==> ")
 
         try:
+            attributeIdRegKeyUser = skCase.addArtifactAttributeType(
+                "TSK_REG_KEY_USER",
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                "User"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_REG_KEY_USER, May already exist. ")
+
+        try:
            attributeIdRunKeyName = skCase.addArtifactAttributeType(
                 "TSK_REG_RUN_KEY_NAME", 
                 BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
@@ -384,15 +393,6 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         except:     
            self.log(Level.INFO, "Attributes Creation Error, TSK_REG_KEY_LOCATION, May already exist. ")
 
-        try:
-            attributeIdRegKeyUser = skCase.addArtifactAttributeType(
-                "TSK_REG_KEY_USER",
-                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
-                "User"
-            )
-        except:     
-           self.log(Level.INFO, "Attributes Creation Error, TSK_REG_KEY_USER, May already exist. ")
-
         attributeIdRunKeyName = skCase.getAttributeType("TSK_REG_RUN_KEY_NAME")
         attributeIdRunKeyValue = skCase.getAttributeType("TSK_REG_RUN_KEY_VALUE")
         attributeIdRegKeyLoc = skCase.getAttributeType("TSK_REG_KEY_LOCATION")
@@ -404,6 +404,8 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         for fileName in filesToExtract:
             files = fileManager.findFiles(dataSource, fileName)
             numFiles = len(files)
+
+            progressBar.switchToDeterminate(numFiles)
 
             for file in files:
             
@@ -420,22 +422,25 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                     user = "System"
                     self.log(Level.INFO, "SOFTWARE hive exists, parsing it")
                     
-                    regFileName = os.path.join(tempDir, file.getName())
-                    regFile = registryHiveFile(File(regFileName))
+                    regFileName = os.path.join(tempDir, fileName)
+                    regFile = RegistryHiveFile(File(regFileName))
 
                     for runKey in self.registrySoftwareRunKeys:
                         self.log(Level.INFO, "Finding key: " + runKey)
 
                         currentKey = self.findRegistryKey(regFile, runKey)
-                        if currentKey and Len(currentKey.getValueList()) > 0:
+                        if currentKey and len(currentKey.getValueList()) > 0:
                             skValues = currentKey.getValueList()
 
                             for skValue in skValues:
+                                skName = skValue.getName()
+                                skVal = skValue.getValue()
+
                                 art = file.newDataArtifact(artType, Arrays.asList(
                                     BlackboardAttribute(attributeIdRegKeyUser, moduleName, user),
                                     BlackboardAttribute(attributeIdRegKeyLoc, moduleName, runKey),
-                                    BlackboardAttribute(attributeIdRunKeyName, moduleName, str(skValue.getName())),
-                                    BlackboardAttribute(attributeIdRunKeyName, moduleName, skValue.getValue().getAsString())
+                                    BlackboardAttribute(attributeIdRunKeyName, moduleName, str(skName)),
+                                    BlackboardAttribute(attributeIdRunKeyName, moduleName, skVal.getAsString())
                                 ))
 
 
@@ -454,22 +459,25 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                     user = file.getParentPath().split('/')[2] 
                     self.log(Level.INFO, "User \'" + user + "\' hive exists, parsing it")
                     
-                    regFileName = os.path.join(tempDir, file.getName())
-                    regFile = registryHiveFile(File(regFileName))
+                    regFileName = os.path.join(tempDir, fileName)
+                    regFile = RegistryHiveFile(File(regFileName))
 
                     for runKey in self.registryNTUserRunKeys:
                         self.log(Level.INFO, "Finding key: " + runKey)
 
                         currentKey = self.findRegistryKey(regFile, runKey)
-                        if currentKey and Len(currentKey.getValueList()) > 0:
+                        if currentKey and len(currentKey.getValueList()) > 0:
                             skValues = currentKey.getValueList()
 
                             for skValue in skValues:
+                                skName = skValue.getName()
+                                skVal = skValue.getValue()
+
                                 art = file.newDataArtifact(artType, Arrays.asList(
                                     BlackboardAttribute(attributeIdRegKeyUser, moduleName, user),
                                     BlackboardAttribute(attributeIdRegKeyLoc, moduleName, runKey),
-                                    BlackboardAttribute(attributeIdRunKeyName, moduleName, str(skValue.getName())),
-                                    BlackboardAttribute(attributeIdRunKeyName, moduleName, skValue.getValue().getAsString())
+                                    BlackboardAttribute(attributeIdRunKeyName, moduleName, str(skName)),
+                                    BlackboardAttribute(attributeIdRunKeyName, moduleName, skVal.getAsString())
                                 ))
 
                                 # index the artifact for keyword search

@@ -155,7 +155,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 'Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/Run',
                 'Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnce',
                 'Microsoft/Windows NT/CurrentVersion/Image File Execution Options',
-                'Classes/CLSID',
+                #'Classes/CLSID',
                 'Microsoft/Windows NT/CurrentVersion/AppCombatFlags',
                 'Windows/CurrentVersion/Explorer/Browser Helper Objects'
             )
@@ -327,7 +327,6 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
         return IngestModule.ProcessResult.OK
 
-    # TODO: Write process_Registry_Runs
     def process_Registry_Runs(self, dataSource, progressBar):
         
         # we don't know how much work there is yet

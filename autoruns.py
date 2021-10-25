@@ -466,9 +466,9 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
                             for skValue in skValues:
                                 art = file.newDataArtifact(artType, Arrays.asList(
-                                    BlackboardAttribute(attributeIdRegKeyUser, moduleName, user)
-                                    BlackboardAttribute(attributeIdRegKeyLoc, moduleName, runKey)
-                                    BlackboardAttribute(attributeIdRunKeyName, moduleName, str(skValue.getName()))
+                                    BlackboardAttribute(attributeIdRegKeyUser, moduleName, user),
+                                    BlackboardAttribute(attributeIdRegKeyLoc, moduleName, runKey),
+                                    BlackboardAttribute(attributeIdRunKeyName, moduleName, str(skValue.getName())),
                                     BlackboardAttribute(attributeIdRunKeyName, moduleName, skValue.getValue().getAsString())
                                 ))
 

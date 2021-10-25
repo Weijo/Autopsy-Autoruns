@@ -116,7 +116,7 @@ class AutoRunsModuleFactory(IngestModuleFactoryAdapter):
         return True
 
     def createDataSourceIngestModule(self, ingestOptions):
-        return AutoRunsIngestModule()
+        return AutoRunsIngestModule(self.settings)
 
 
 # Data Source-level ingest module.  One gets created per data source.
@@ -398,7 +398,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         attributeIdRegKeyLoc = skCase.getAttributeType("TSK_REG_KEY_LOCATION")
         attributeIdRegKeyUser = skCase.getAttributeType("TSK_REG_KEY_USER")
 
-        moduleName = RegistryExampleIngestModuleFactory.moduleName
+        moduleName = AutoRunsModuleFactory.moduleName
 
         # Look for files to process
         for fileName in filesToExtract:

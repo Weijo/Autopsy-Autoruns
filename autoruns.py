@@ -36,20 +36,6 @@ import os
 import shutil
 import ntpath
 
-from javax.swing import JCheckBox
-from java.awt import GridLayout
-from java.awt import GridBagLayout
-from java.awt import GridBagConstraints
-from javax.swing import JPanel
-from javax.swing import JFileChooser
-from javax.swing import JScrollPane
-from javax.swing.filechooser import FileNameExtensionFilter
-
-from com.williballenthin.rejistry import RegistryHiveFile
-from com.williballenthin.rejistry import RegistryKey
-from com.williballenthin.rejistry import RegistryParseException
-from com.williballenthin.rejistry import RegistryValue
-
 from java.io import File
 from java.lang import Class
 from java.lang import System
@@ -80,6 +66,23 @@ from org.sleuthkit.autopsy.casemodule.services import FileManager
 from org.sleuthkit.autopsy.datamodel import ContentUtils
 from org.sleuthkit.autopsy.modules.interestingitems import FilesSetsManager
 
+# UI Settings Imports
+from javax.swing import JCheckBox
+from java.awt import GridLayout
+from java.awt import GridBagLayout
+from java.awt import GridBagConstraints
+from javax.swing import JPanel
+from javax.swing import JFileChooser
+from javax.swing import JScrollPane
+from javax.swing.filechooser import FileNameExtensionFilter
+
+# Registry Interaction imports
+from com.williballenthin.rejistry import RegistryHiveFile
+from com.williballenthin.rejistry import RegistryKey
+from com.williballenthin.rejistry import RegistryParseException
+from com.williballenthin.rejistry import RegistryValue
+
+# Scheduled Tasks imports
 import json
 import winjob
 

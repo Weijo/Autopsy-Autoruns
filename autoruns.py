@@ -35,7 +35,6 @@ import inspect
 import os
 import shutil
 import ntpath
-import Registry
 
 from java.io import File
 from java.lang import Class
@@ -230,7 +229,8 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
             # Startup folder
             self.startupProgram = (
-                'Microsoft/Windows/Start Menu/Programs/Startup'     # Different root folder, same subpath
+                'C:/ProgramData/Microsoft/Windows/Start Menu/Programs/Startup',     # Startup path for all users
+                '%appdata%/Microsoft/Windows/Start Menu/Programs/Startup'           # Different root folder, same subpath
             )
 
         if self.local_settings.getSetting('CLSID') == 'true':
@@ -547,24 +547,6 @@ class AutoRunsIngestModule(DataSourceIngestModule):
            self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_URI, May already exist. ")
 
         try:
-           attributeIdScheduledTasksDescription = skCase.addArtifactAttributeType(
-                "TSK_SCHEDULED_TASKS_DESCRIPTION", 
-                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
-                "Description"
-            )
-        except:     
-           self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_DESCRIPTION, May already exist. ")
-
-        try:
-           attributeIdScheduledTasksDate = skCase.addArtifactAttributeType(
-                "TSK_SCHEDULED_TASKS_DATE", 
-                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
-                "Date"
-            )
-        except:     
-           self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_DATE, May already exist. ")
-
-        try:
             attributeIdScheduledTasksStatus = skCase.addArtifactAttributeType(
                 "TSK_SCHEDULED_TASKS_STATUS",
                 BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
@@ -581,33 +563,15 @@ class AutoRunsIngestModule(DataSourceIngestModule):
             )
         except:     
            self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_COMMAND, May already exist. ")
-
-        try:
-           attributeIdScheduledTasksActions = skCase.addArtifactAttributeType(
-                "TSK_SCHEDULED_TASKS_ACTIONS", 
-                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
-                "Actions"
-            )
-        except:     
-           self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_COMMAND, May already exist. ")
         
         try:
-           attributeIdScheduledTasksTriggers = skCase.addArtifactAttributeType(
-                "TSK_SCHEDULED_TASKS_TRIGGERS", 
+           attributeIdScheduledTasksTrigger = skCase.addArtifactAttributeType(
+                "TSK_SCHEDULED_TASKS_TRIGGER", 
                 BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
-                "Triggers"
+                "Trigger"
             )
         except:     
-           self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_TRIGGERS, May already exist. ")
-
-        try:
-           attributeIdScheduledTasksHidden = skCase.addArtifactAttributeType(
-                "TSK_SCHEDULED_TASKS_HIDDEN", 
-                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
-                "Hidden"
-            )
-        except:     
-           self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_HIDDEN, May already exist. ")
+           self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_TRIGGER, May already exist. ")
         
         try:
            attributeIdScheduledTasksDump = skCase.addArtifactAttributeType(
@@ -619,16 +583,14 @@ class AutoRunsIngestModule(DataSourceIngestModule):
            self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_DUMP, May already exist. ")
 
         attributeIdScheduledTasksURI = skCase.getAttributeType("TSK_SCHEDULED_TASKS_URI")
-        attributeIdScheduledTasksDescription = skCase.getAttributeType("TSK_SCHEDULED_TASKS_DESCRIPTION")
-        attributeIdScheduledTasksDate = skCase.getAttributeType("TSK_SCHEDULED_TASKS_DATE")
         attributeIdScheduledTasksStatus = skCase.getAttributeType("TSK_SCHEDULED_TASKS_STATUS")
         attributeIdScheduledTasksCommand = skCase.getAttributeType("TSK_SCHEDULED_TASKS_COMMAND")
-        attributeIdScheduledTasksActions = skCase.getAttributeType("TSK_SCHEDULED_TASKS_ACTIONS")
-        attributeIdScheduledTasksTriggers = skCase.getAttributeType("TSK_SCHEDULED_TASKS_TRIGGERS")
-        attributeIdScheduledTasksHidden = skCase.getAttributeType("TSK_SCHEDULED_TASKS_HIDDEN")
+        attributeIdScheduledTasksTrigger = skCase.getAttributeType("TSK_SCHEDULED_TASKS_TRIGGER")
         attributeIdScheduledTasksDump = skCase.getAttributeType("TSK_SCHEDULED_TASKS_DUMP")
 
         moduleName = AutoRunsModuleFactory.moduleName
+
+
 
         # Get Scheduled Task files
         filesTemp = fileManager.findFiles(dataSource, "%", self.ScheduledTasksLoc)
@@ -651,13 +613,9 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                     data = task.parse()
 
                     uri = data["uri"]
-                    description = data["description"] if data["description"] else ""
-                    date = data["date"] if data["date"] else ""
                     enabled = data["triggers"][0]["Enabled"] if data["triggers"] else ""
                     command = data["actions"][0]["Command"] if "Command" in data["actions"][0] else ""
-                    actions = data["actions"][0] if data["actions"] else ""
-                    triggers = data["triggers"][0] if data["triggers"] else ""
-                    hidden = data["hidden"] if data["hidden"] else ""
+                    trigger = data["triggers"][0]["Type"] if data["triggers"] else ""
 
                     status = "Enabled" if enabled == "true" else "Disabled" if enabled == "false" else "" 
 
@@ -668,25 +626,19 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                     #     "\nTrigger: " + trigger
                     # )
 
-                    # Don't index empty commands
-                    if command != "":
-                        art = file.newDataArtifact(artType, Arrays.asList(
-                            BlackboardAttribute(attributeIdScheduledTasksURI, moduleName, uri),
-                            BlackboardAttribute(attributeIdScheduledTasksDescription, moduleName, description),
-                            BlackboardAttribute(attributeIdScheduledTasksDate, moduleName, date),
-                            BlackboardAttribute(attributeIdScheduledTasksStatus, moduleName, status),
-                            BlackboardAttribute(attributeIdScheduledTasksCommand, moduleName, command),
-                            BlackboardAttribute(attributeIdScheduledTasksActions, moduleName, json.dumps(actions, indent=2)),
-                            BlackboardAttribute(attributeIdScheduledTasksTriggers, moduleName, json.dumps(triggers, indent=2)),
-                            BlackboardAttribute(attributeIdScheduledTasksHidden, moduleName, hidden),
-                            BlackboardAttribute(attributeIdScheduledTasksDump, moduleName, json.dumps(task.parse(), indent=2))
-                        ))
+                    art = file.newDataArtifact(artType, Arrays.asList(
+                        BlackboardAttribute(attributeIdScheduledTasksURI, moduleName, uri),
+                        BlackboardAttribute(attributeIdScheduledTasksStatus, moduleName, status),
+                        BlackboardAttribute(attributeIdScheduledTasksCommand, moduleName, command),
+                        BlackboardAttribute(attributeIdScheduledTasksTrigger, moduleName, trigger),
+                        BlackboardAttribute(attributeIdScheduledTasksDump, moduleName, json.dumps(task.parse(), indent=2))
+                    ))
 
-                        # index the artifact for keyword search
-                        try:
-                            blackboard.postArtifact(art, moduleName)
-                        except Blackboard.BlackboardException as ex:
-                            self.log(Level.SEVERE, "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
+                    # index the artifact for keyword search
+                    try:
+                        blackboard.postArtifact(art, moduleName)
+                    except Blackboard.BlackboardException as ex:
+                        self.log(Level.SEVERE, "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
 
 
         #Clean up Autoruns directory and files
@@ -697,75 +649,6 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
     # TODO: Write process_Active_Setup
     def process_Active_Setup(self, dataSource, progressBar):
-
-        progressBar.switchToIndeterminate()
-
-        progressBar.progress("Finding Active Setups")
-
-        # Set the database to be read to the once created by the prefetch parser program
-        skCase = Case.getCurrentCase().getSleuthkitCase()
-        blackboard = Case.getCurrentCase().getSleuthkitCase().getBlackboard()
-        fileManager = Case.getCurrentCase().getServices().getFileManager()
-
-        # Create autoruns directory in temp directory, if it exists then continue on processing
-        tempDir = os.path.join(Case.getCurrentCase().getTempDirectory(), "Autoruns")
-        self.log(Level.INFO, "create Directory " + tempDir)
-        try:
-            os.mkdir(tempDir)
-        except:
-            self.log(Level.INFO, "Autoruns Directory already exists " + tempDir)
-
-        artType = skCase.getArtifactType("TSK_ACTIVE_SETUP")
-        if not artType:
-            try:
-                artType = skCase.addBlackboardArtifactType( "TSK_ACTIVE_SETUP", "Active Setups")
-            except:
-                self.log(Level.WARNING, "Artifacts Creation Error, some artifacts may not exist now. ==> ")
-
-        try:
-            attributeIdActiveSetupName = skCase.addArtifactAttributeType(
-                "TSK_ACTIVE_SETUP_NAME",
-                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
-                "Name"
-            )
-        except:
-           self.log(Level.INFO, "Attributes Creation Error, TSK_ACTIVE_SETUP_NAME, May already exist. ")
-
-        try:
-            attributeIdActiveSetupStubpath = skCase.addArtifactAttributeType(
-                "TSK_ACTIVE_SETUP_STUBPATH",
-                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
-                "STUBPATH"
-            )
-        except:
-           self.log(Level.INFO, "Attributes Creation Error, TSK_ACTIVE_SETUP_STUBPATH, May already exist. ")
-
-        try:
-            attributeIdActiveSetupComponentID = skCase.addArtifactAttributeType(
-                "TSK_ACTIVE_SETUP_COMPONENTID",
-                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
-                "Component ID"
-            )
-        except:
-           self.log(Level.INFO, "Attributes Creation Error, TSK_ACTIVE_SETUP_COMPONENTID, May already exist. ")
-
-        try:
-            attributeIdActiveSetupVersion = skCase.addArtifactAttributeType(
-                "TSK_ACTIVE_SETUP_VERSION",
-                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
-                "Version"
-            )
-        except:
-           self.log(Level.INFO, "Attributes Creation Error, TSK_ACTIVE_SETUP_VERSION, May already exist. ")
-
-        attributeIdActiveSetupName = skCase.getAttributeType("TSK_ACTIVE_SETUP_NAME")
-        attributeIdActiveSetupStubpath = skCase.getAttributeType("TSK_ACTIVE_SETUP_STUBPATH")
-        attributeIdActiveSetupComponentID = skCase.getAttributeType("TSK_ACTIVE_SETUP_COMPONENTID")
-        attributeIdActiveSetupVersion = skCase.getAttributeType("TSK_ACTIVE_SETUP_VERSION")
-
-        moduleName = AutoRunsModuleFactory.moduleName
-
-        
         pass
 
     # TODO: Write process_Registry_Fixit
@@ -774,7 +657,125 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
     # TODO: Write process_Startup_Program
     def process_Startup_Program(self, dataSource, progressBar):
-        pass
+        # we don't know how much work there is yet
+        progressBar.switchToIndeterminate()
+
+        progressBar.progress("Finding Startup Programs")
+
+        # Set the database to be read to the once created by the prefetch parser program
+        skCase = Case.getCurrentCase().getSleuthkitCase()
+        blackboard = Case.getCurrentCase().getSleuthkitCase().getBlackboard()
+        fileManager = Case.getCurrentCase().getServices().getFileManager()
+
+        # Create autoruns directory in temp directory, if it exists then continue on processing      
+        tempDir = os.path.join(Case.getCurrentCase().getTempDirectory(), "Autoruns/startup")
+        self.log(Level.INFO, "create Directory " + tempDir)
+        try:
+            os.mkdir(tempDir)
+        except:
+            self.log(Level.INFO, "Autoruns Directory already exists " + tempDir)
+
+        # Setup Artifact and Attributes
+        artType = skCase.getArtifactType("TSK_STARTUP_PROGRAMS")
+        if not artType:
+            try:
+                artType = skCase.addBlackboardArtifactType( "TSK_STARTUP_PROGRAMS", "Startup Programs")
+            except:     
+                self.log(Level.WARNING, "Artifacts Creation Error, some artifacts may not exist now. ==> ")
+
+        try:
+            attributeIdScheduledTasksURI = skCase.addArtifactAttributeType(
+                "TSK_STARTUP_PROGRAMS_FILE_PATH",
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                "File Path"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_STARTUP_PROGRAMS_FILE_PATH, May already exist. ")
+
+        try:
+            attributeIdScheduledTasksStatus = skCase.addArtifactAttributeType(
+                "TSK_STARTUP_PROGRAMS_DATE_CREATED",
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.DATETIME,
+                "Date Created"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_STARTUP_PROGRAMS_DATE_CREATED, May already exist. ")
+
+        try:
+           attributeIdScheduledTasksCommand = skCase.addArtifactAttributeType(
+                "TSK_STARTUP_PROGRAMS_DATE_MODIFIED", 
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.DATETIME, 
+                "Date Modified"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_STARTUP_PROGRAMS_COMMAND, May already exist. ")
+        
+        try:
+           attributeIdScheduledTasksTrigger = skCase.addArtifactAttributeType(
+                "TSK_STARTUP_PROGRAMS_DATE_ACCESSED", 
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.DATETIME, 
+                "Date Accessed"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_STARTUP_PROGRAMS_DATE_ACCESSED, May already exist. ")
+
+        attributeIdStartUpProgramsFilePath = skCase.getAttributeType("TSK_STARTUP_PROGRAMS_FILE_PATH")
+        attributeIdStartUpProgramsDateCreated = skCase.getAttributeType("TSK_STARTUP_PROGRAMS_DATE_CREATED")
+        attributeIdStartUpProgramsDateModified = skCase.getAttributeType("TSK_STARTUP_PROGRAMS_DATE_MODIFIED")
+        attributeIdStartUpProgramsDateAccessed = skCase.getAttributeType("TSK_STARTUP_PROGRAMS_DATE_ACCESSED")
+
+        moduleName = AutoRunsModuleFactory.moduleName
+
+        # Get Startup Program files
+        filesTemp = fileManager.findFiles(dataSource, "%", self.startupProgram)
+
+        for file in filesTemp:
+
+            # check if cancel was pressed
+            if self.context.isJobCancelled():
+                return IngestModule.ProcessResult.OK
+
+            if (not file.isDir()):
+                # self.log(Level.INFO, "Working on: "  + file.getParentPath() + file.getName())
+
+                # Save the file locally in the temp folder.
+                self.writeHiveFile(file, file.getName(), tempDir)
+                # terr continue here
+                filePath = os.path.join(tempDir, file.getName())
+
+                file_path = data["uri"]
+                date_created = data["triggers"][0]["Enabled"] if data["triggers"] else ""
+                date_modified = data["actions"][0]["Command"] if "Command" in data["actions"][0] else ""
+                date_accessed = data["triggers"][0]["Type"] if data["triggers"] else ""
+
+                status = "Enabled" if enabled == "true" else "Disabled" if enabled == "false" else "" 
+
+                # self.log(Level.INFO, "File: " + file.getName() +  
+                #     "\nURI: " + uri + 
+                #     "\nStatus: " + status +
+                #     "\nCommand: " + command + 
+                #     "\nTrigger: " + trigger
+                # )
+
+                art = file.newDataArtifact(artType, Arrays.asList(
+                    BlackboardAttribute(attributeIdStartUpProgramsFilePath, moduleName, file_path),
+                    BlackboardAttribute(attributeIdStartUpProgramsDateCreated, moduleName, date_created),
+                    BlackboardAttribute(attributeIdStartUpProgramsDateModified, moduleName, date_modified),
+                    BlackboardAttribute(attributeIdStartUpProgramsDateAccessed, moduleName, date_accessed),
+                ))
+
+                # index the artifact for keyword search
+                try:
+                    blackboard.postArtifact(art, moduleName)
+                except Blackboard.BlackboardException as ex:
+                    self.log(Level.SEVERE, "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
+
+
+        #Clean up Autoruns directory and files
+        try:
+            shutil.rmtree(tempDir)      
+        except:
+            self.log(Level.INFO, "removal of directory tree failed " + tempDir)
 
     # TODO: Write process_CLSID
     def process_CLSID(self, dataSource, progressBar):
@@ -801,6 +802,33 @@ class AutoRunsIngestModule(DataSourceIngestModule):
             self.log(Level.INFO, "Unable to parse key: " + key)
             return None
 
+    def getFileMetadata(self, fileName):
+        # this gets file path and me
+        fileRecord = 0
+    
+        with open(fileName, "rb") as file: 
+            fileRecord = file.read()
+
+        fileHeader = int(str(struct.unpack_from('<q', fileRecord[0:])[0]))
+        #print ("File Header > " + str(fileHeader))
+
+        if (fileHeader == 2):
+           fileSize = int(str(struct.unpack_from('<q', fileRecord[8:])[0]))
+           deleteTimeStamp = int(str(struct.unpack_from('<q', fileRecord[16:])[0])[0:11]) - 11644473600
+           fileNameLength = int(str(struct.unpack_from('<l', fileRecord[24:])[0]))
+           nameLength = "<" + str(fileNameLength * 2) + "s"
+           fileName = struct.unpack_from(nameLength, fileRecord[28:])[0]
+           fileNamePath = self.utf16decode(fileName)
+           return fileNamePath, deleteTimeStamp
+        else:
+           fileSize = int(str(struct.unpack_from('<q', fileRecord[8:])[0]))
+           deleteTimeStamp = int(str(struct.unpack_from('<q', fileRecord[16:])[0])[0:11]) - 11644473600
+           fileName = str(struct.unpack_from('<520s', fileRecord[24:])[0]) 
+           fileNamePath = self.utf16decode(fileName)
+           return fileNamePath, deleteTimeStamp
+
+        return None, None
+    
 # UI that is shown to user for each ingest job so they can configure the job.
 class AutorunsWithUISettingsPanel(IngestModuleIngestJobSettingsPanel):
     # Note, we can't use a self.settings instance variable.

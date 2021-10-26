@@ -35,6 +35,7 @@ import inspect
 import os
 import shutil
 import ntpath
+import Registry
 
 from java.io import File
 from java.lang import Class
@@ -696,6 +697,75 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
     # TODO: Write process_Active_Setup
     def process_Active_Setup(self, dataSource, progressBar):
+
+        progressBar.switchToIndeterminate()
+
+        progressBar.progress("Finding Active Setups")
+
+        # Set the database to be read to the once created by the prefetch parser program
+        skCase = Case.getCurrentCase().getSleuthkitCase()
+        blackboard = Case.getCurrentCase().getSleuthkitCase().getBlackboard()
+        fileManager = Case.getCurrentCase().getServices().getFileManager()
+
+        # Create autoruns directory in temp directory, if it exists then continue on processing
+        tempDir = os.path.join(Case.getCurrentCase().getTempDirectory(), "Autoruns")
+        self.log(Level.INFO, "create Directory " + tempDir)
+        try:
+            os.mkdir(tempDir)
+        except:
+            self.log(Level.INFO, "Autoruns Directory already exists " + tempDir)
+
+        artType = skCase.getArtifactType("TSK_ACTIVE_SETUP")
+        if not artType:
+            try:
+                artType = skCase.addBlackboardArtifactType( "TSK_ACTIVE_SETUP", "Active Setups")
+            except:
+                self.log(Level.WARNING, "Artifacts Creation Error, some artifacts may not exist now. ==> ")
+
+        try:
+            attributeIdActiveSetupName = skCase.addArtifactAttributeType(
+                "TSK_ACTIVE_SETUP_NAME",
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                "Name"
+            )
+        except:
+           self.log(Level.INFO, "Attributes Creation Error, TSK_ACTIVE_SETUP_NAME, May already exist. ")
+
+        try:
+            attributeIdActiveSetupStubpath = skCase.addArtifactAttributeType(
+                "TSK_ACTIVE_SETUP_STUBPATH",
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                "STUBPATH"
+            )
+        except:
+           self.log(Level.INFO, "Attributes Creation Error, TSK_ACTIVE_SETUP_STUBPATH, May already exist. ")
+
+        try:
+            attributeIdActiveSetupComponentID = skCase.addArtifactAttributeType(
+                "TSK_ACTIVE_SETUP_COMPONENTID",
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                "Component ID"
+            )
+        except:
+           self.log(Level.INFO, "Attributes Creation Error, TSK_ACTIVE_SETUP_COMPONENTID, May already exist. ")
+
+        try:
+            attributeIdActiveSetupVersion = skCase.addArtifactAttributeType(
+                "TSK_ACTIVE_SETUP_VERSION",
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                "Version"
+            )
+        except:
+           self.log(Level.INFO, "Attributes Creation Error, TSK_ACTIVE_SETUP_VERSION, May already exist. ")
+
+        attributeIdActiveSetupName = skCase.getAttributeType("TSK_ACTIVE_SETUP_NAME")
+        attributeIdActiveSetupStubpath = skCase.getAttributeType("TSK_ACTIVE_SETUP_STUBPATH")
+        attributeIdActiveSetupComponentID = skCase.getAttributeType("TSK_ACTIVE_SETUP_COMPONENTID")
+        attributeIdActiveSetupVersion = skCase.getAttributeType("TSK_ACTIVE_SETUP_VERSION")
+
+        moduleName = AutoRunsModuleFactory.moduleName
+
+        
         pass
 
     # TODO: Write process_Registry_Fixit

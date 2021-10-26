@@ -43,6 +43,7 @@ from java.lang import System
 from java.sql  import DriverManager, SQLException
 from java.util.logging import Level
 from java.util import Arrays
+from java.util import Calendar, GregorianCalendar
 from org.sleuthkit.datamodel import SleuthkitCase
 from org.sleuthkit.datamodel import AbstractFile
 from org.sleuthkit.datamodel import ReadContentInputStream
@@ -86,6 +87,9 @@ from com.williballenthin.rejistry import RegistryValue
 # Scheduled Tasks imports
 import json
 import winjob
+
+# Services imports
+import re
 
 # Factory that defines the name and details of the module and allows Autopsy
 # to create instances of the modules that will do the analysis.
@@ -199,9 +203,31 @@ class AutoRunsIngestModule(DataSourceIngestModule):
             self.log(Level.INFO, "Services ==> " + str(self.local_settings.getSetting('Services')))
 
             # Services
-            self.registryServices = (
-                'CurrentControlSet/Services'
-            )
+            self.serviceTypes = {
+                0x001: "Kernel driver",
+                0x002: "File system driver",
+                0x004: "Arguments for adapter",
+                0x008: "File system driver",
+                0x010: "Win32_Own_Process",
+                0x020: "Win32_Share_Process",
+                0x050: "User_Own_Process TEMPLATE",
+                0x060: "User_Share_Process TEMPLATE",
+                0x0D0: "User_Own_Process INSTANCE",
+                0x0E0: "User_Share_Process INSTANCE",
+                0x100: "Interactive",
+                0x110: "Interactive",
+                0x120: "Share_process Interactive",
+                -1: "Unknown",
+            }
+
+            self.serviceStartup = {
+                0x00: "Boot Start",
+                0x01: "System Start",
+                0x02: "Auto Start",
+                0x03: "Manual",
+                0x04: "Disabled",
+                -1: "Unknown",
+            }
 
         if self.local_settings.getSetting('Scheduled_Tasks') == 'true':
             self.log(Level.INFO, "Scheduled Tasks ==> " + str(self.local_settings.getSetting('Scheduled_Tasks')))
@@ -428,7 +454,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                     user = "System"
                     self.log(Level.INFO, "SOFTWARE hive exists, parsing it")
                     
-                    regFileName = os.path.join(tempDir, fileName)
+                    regFileName = os.path.join(tempDir, file.getName())
                     regFile = RegistryHiveFile(File(regFileName))
 
                     for runKey in self.registrySoftwareRunKeys:
@@ -446,7 +472,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                                     BlackboardAttribute(attributeIdRegKeyUser, moduleName, user),
                                     BlackboardAttribute(attributeIdRegKeyLoc, moduleName, runKey),
                                     BlackboardAttribute(attributeIdRunKeyName, moduleName, str(skName)),
-                                    BlackboardAttribute(attributeIdRunKeyValue, moduleName, skVal.getAsString())
+                                    BlackboardAttribute(attributeIdRunKeyValue, moduleName, str(skVal.getAsString()))
                                 ))
 
 
@@ -483,7 +509,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                                     BlackboardAttribute(attributeIdRegKeyUser, moduleName, user),
                                     BlackboardAttribute(attributeIdRegKeyLoc, moduleName, runKey),
                                     BlackboardAttribute(attributeIdRunKeyName, moduleName, str(skName)),
-                                    BlackboardAttribute(attributeIdRunKeyValue, moduleName, skVal.getAsString())
+                                    BlackboardAttribute(attributeIdRunKeyValue, moduleName, str(skVal.getAsString()))
                                 ))
 
                                 # index the artifact for keyword search
@@ -505,7 +531,212 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
     # TODO: Write process_Services
     def process_Services(self, dataSource, progressBar):
-        pass
+        
+        # we don't know how much work there is yet
+        progressBar.switchToIndeterminate()
+
+        progressBar.progress("Finding Services")
+
+        # Create autoruns directory in temp directory, if it exists then continue on processing      
+        tempDir = os.path.join(Case.getCurrentCase().getTempDirectory(), "Autoruns")
+        self.log(Level.INFO, "create Directory " + tempDir)
+        try:
+            os.mkdir(tempDir)
+        except:
+            self.log(Level.INFO, "Autoruns Directory already exists " + tempDir)
+
+        # Set the database to be read to the once created by the prefetch parser program
+        skCase = Case.getCurrentCase().getSleuthkitCase()
+        blackboard = Case.getCurrentCase().getSleuthkitCase().getBlackboard()
+        fileManager = Case.getCurrentCase().getServices().getFileManager()
+
+        # Setup Artifact and Attributes
+        artType = skCase.getArtifactType("TSK_SERVICE")
+        if not artType:
+            try:
+                artType = skCase.addBlackboardArtifactType( "TSK_SERVICE", "Services")
+            except:     
+                self.log(Level.WARNING, "Artifacts Creation Error, some artifacts may not exist now. ==> ")
+
+        try:
+            attributeIdServiceDisplayName = skCase.addArtifactAttributeType(
+                "TSK_SERVICE_DISPLAY_NAME",
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                "Display Name"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_SERVICE_DISPLAY_NAME, May already exist. ")
+
+        try:
+           attributeIdServiceTimestamp = skCase.addArtifactAttributeType(
+                "TSK_SERVICE_TIMESTAMP", 
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
+                "Timestamp"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_SERVICE_TIMESTAMP, May already exist. ")
+        
+        try:
+           attributeIdServiceStartup = skCase.addArtifactAttributeType(
+                "TSK_SERVICE_STARTUP", 
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
+                "Startup"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_SERVICE_STARTUP, May already exist. ")
+        
+        try:
+           attributeIdServiceType = skCase.addArtifactAttributeType(
+                "TSK_SERVICE_TYPE", 
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
+                "Type"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_SERVICE_TYPE, May already exist. ")
+
+        try:
+           attributeIdServiceImagePath = skCase.addArtifactAttributeType(
+                "TSK_SERVICE_IMAGE_PATH", 
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
+                "Image Path"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_SERVICE_IMAGE_PATH, May already exist. ")
+
+        try:
+           attributeIdServiceServiceDll = skCase.addArtifactAttributeType(
+                "TSK_SERVICE_SERVICE_DLL", 
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
+                "Service Dll"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_SERVICE_SERVICE_DLL, May already exist. ")
+
+        attributeIdServiceDisplayName = skCase.getAttributeType("TSK_SERVICE_DISPLAY_NAME")
+        attributeIdServiceTimestamp = skCase.getAttributeType("TSK_SERVICE_TIMESTAMP")
+        attributeIdServiceStartup = skCase.getAttributeType("TSK_SERVICE_STARTUP")
+        attributeIdServiceType = skCase.getAttributeType("TSK_SERVICE_TYPE")
+        attributeIdServiceImagePath = skCase.getAttributeType("TSK_SERVICE_IMAGE_PATH")
+        attributeIdServiceServiceDll = skCase.getAttributeType("TSK_SERVICE_SERVICE_DLL")
+
+
+        moduleName = AutoRunsModuleFactory.moduleName
+
+        # Extract file
+        files = fileManager.findFiles(dataSource, "SYSTEM", "/Windows/System32/Config")
+        numFiles = len(files)
+        progressBar.switchToDeterminate(numFiles)
+
+        for file in files:
+            # Check if the user pressed cancel while we were busy
+            if self.context.isJobCancelled():
+                return IngestModule.ProcessResult.OK
+
+            self.log(Level.INFO, "Name of file: " + file.getParentPath() + file.getName() )
+
+            # Check path to only get the hive files in the config directory and no others
+            if ((file.getName() == 'SYSTEM') and (file.getParentPath().upper() == '/WINDOWS/SYSTEM32/CONFIG/') and (file.getSize() > 0)):
+
+                # Save the file locally in the temp folder. 
+                self.writeHiveFile(file, file.getName(), tempDir)
+
+                regFileName = os.path.join(tempDir, file.getName())
+                regFile = RegistryHiveFile(File(regFileName))
+
+                # Find ControlSets
+                rootkey = regFile.getRoot()
+                subkeys = rootkey.getSubkeyList()
+                for subkey in subkeys:
+                    if re.match(r'.*ControlSet.*', subkey.getName()):
+                        currentkey = subkey.getSubkey("Services")
+
+                        self.log(Level.INFO, "Current Key: " + currentkey.getName())
+                        for servicekey in currentkey.getSubkeyList():
+                            self.log(Level.INFO, "Parsing " + servicekey.getName())
+                            
+                            # Store values in dictionary
+                            values = {}
+                            for skValue in servicekey.getValueList():                      
+                                #self.log(Level.INFO, "Trying: " + skValue.getName())
+                                regType = str(skValue.getValueType())
+                                #self.log(Level.INFO, "Type: " + regType)
+                                if regType in ["REG_EXPAND_SZ", "REG_SZ"]:
+                                    values[skValue.getName()] = skValue.getValue().getAsString()
+                                elif regType in ["REG_DWORD", "REG_QWORD", "REG_BIG_ENDIAN"] :
+                                    values[skValue.getName()] = skValue.getValue().getAsNumber()
+                                elif regType == "REG_MULTI_SZ":
+                                    values[skValue.getName()] = list(skValue.getValue().getAsStringList())
+                                    
+
+                            #self.log(Level.INFO, "Values: " + json.dumps(values, indent=2))
+                            image_path = values.get("ImagePath", "")
+                            display_name = values.get("DisplayName", "")
+                            service_dll = values.get("ServiceDll", "")
+                            main = values.get("ServiceMain", "")
+                            startup = values.get("Start", "")
+                            service_type = values.get("Type", "")
+                            timestamp = servicekey.getTimestamp()
+
+                            # startup 0, 1, 2 are ASEPs
+                            if not image_path or startup not in [0, 1, 2]:
+                                continue
+
+                            if 'svchost.exe -k' in image_path.lower() or "Share_process" in self.serviceTypes[service_type]:
+                                try:
+                                    sk = servicekey.getSubkey("Parameters")
+                                except:
+                                    sk = None
+
+                                # Get serviceDll located in paramters
+                                if sk and not service_dll:
+                                    timestamp = sk.getTimestamp()
+                                    try:
+                                        service_dll = sk.getValue("ServiceDll")
+                                    except:
+                                        service_dll = ""
+
+                                    try:
+                                        main = sk.getValue("ServiceMain")
+                                    except:
+                                        main = ""
+
+                                if not service_dll and '@' in display_name:
+                                    timestamp = servicekey.getTimestamp()
+                                    service_dll = display_name.split('@')[1].split(',')[0]
+
+                            # self.log(Level.INFO, "Image Path: " + str(image_path) +
+                            #     "\nDisplay Name: " + str(display_name) + 
+                            #     "\nService Dll: " + str(service_dll) +
+                            #     "\nMain: " + str(main) +
+                            #     "\nStartup: " + self.serviceStartup[startup] +
+                            #     "\nType: " + self.serviceTypes[service_type] +
+                            #     "\nTimestamp: " + str(timestamp.toZonedDateTime())
+                            # )
+
+                            art = file.newDataArtifact(artType, Arrays.asList(
+                                BlackboardAttribute(attributeIdServiceDisplayName, moduleName, str(display_name)),
+                                BlackboardAttribute(attributeIdServiceTimestamp, moduleName, str(timestamp.toZonedDateTime())),
+                                BlackboardAttribute(attributeIdServiceStartup, moduleName, self.serviceStartup[startup]),
+                                BlackboardAttribute(attributeIdServiceType, moduleName, self.serviceTypes[service_type]),
+                                BlackboardAttribute(attributeIdServiceImagePath, moduleName, str(image_path)),
+                                BlackboardAttribute(attributeIdServiceServiceDll, moduleName, str(service_dll)),
+                            ))
+
+                            # index the artifact for keyword search
+                            try:
+                                blackboard.postArtifact(art, moduleName)
+                            except Blackboard.BlackboardException as ex:
+                                self.log(Level.SEVERE, "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
+
+
+                        
+
+            #Clean up Autoruns directory and files
+            try:
+                shutil.rmtree(tempDir)      
+            except:
+                self.log(Level.INFO, "removal of directory tree failed " + tempDir)
+
 
     # TODO: Write process_Scheduled_Tasks
     def process_Scheduled_Tasks(self, dataSource, progressBar):
@@ -634,6 +865,11 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         filesTemp = fileManager.findFiles(dataSource, "%", self.ScheduledTasksLoc)
 
         for file in filesTemp:
+
+            # Check if the user pressed cancel while we were busy
+            if self.context.isJobCancelled():
+                return IngestModule.ProcessResult.OK
+
             if (not file.isDir()):
                 #self.log(Level.INFO, "Working on: "  + file.getParentPath() + file.getName())
 

@@ -13,7 +13,7 @@ Autopsy plugin that scans the Auto-Start Extensibility Points (ASEPs) and list o
 - [ ] Write Module
 	- [x] Registry Run Keys
     - [x] Scheduled Tasks
-    - [ ] Services
+    - [x] Services
     - [ ] Active Setup
     - [ ] WinLogon
     - [ ] Others
@@ -49,3 +49,4 @@ if you encounter an error whereby the program crashes, high chance whatever file
 - ASEP read (https://www.sciencedirect.com/science/article/pii/S1742287619300362)
 - Some outdated python module guide (http://www.osdfcon.org/presentations/2018/Eugene-Livis-Writing-Autopsy-Python-Modules.pdf)
 - This guy has a ton of modules (https://github.com/markmckinnon/Autopsy-Plugins)
+- Rejistry Java file for method reference (https://github.com/williballenthin/Rejistry)

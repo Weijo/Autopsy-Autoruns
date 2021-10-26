@@ -35,7 +35,6 @@ import inspect
 import os
 import shutil
 import ntpath
-import Registry
 
 from java.io import File
 from java.lang import Class

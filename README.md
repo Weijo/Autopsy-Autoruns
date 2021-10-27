@@ -53,3 +53,4 @@ if you encounter an error whereby the program crashes, high chance whatever file
 - More ASEP by mitre (https://attack.mitre.org/techniques/T1547/001/)
 - Windows Registry Forensics book (https://books.google.com.sg/books?id=BtVtBgAAQBAJ&pg=PA1#v=onepage&q&f=false)
 - Another Startup locations reference (https://www.anvir.com/windows-startup-programs-xp.htm)
+- Active Setup Explained - (https://helgeklein.com/blog/active-setup-explained/)

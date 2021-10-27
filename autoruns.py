@@ -1066,6 +1066,60 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
     # TODO: Write process_Active_Setup
     def process_Active_Setup(self, dataSource, progressBar):
+        files = fileManager.findFiles(dataSource, "SOFTWARE", "/Windows/System32/Config")
+        numfiles = len(files)
+        progressBar.switchToIndeterminate(numfiles)
+
+        for file in files:
+            if self.context.isJobCancelled():
+                return IngestModule.ProcessResult.OK
+
+            self.log(Level.INFO, "Name of file: " + file.getParentPath() + file.getName())
+
+            if ((file.getName() == 'SOFTWARE') and (file.getParentPath().upper() == '/WINDOWS/SYSTEM32/CONFIG/') and (
+                    file.getSize() > 0)):
+                self.writeHiveFile(file, file.getName(), tempDir)
+
+                regFileName = os.path.join(tempDir, file.getName())
+                regFile = RegistryHiveFile(File(regFileName))
+
+                rootkey = regFile.getRoot()
+                subkeys = rootkey.getSubkeyList()
+                for subkey in subkeys:
+                    if re.match(r'Microsoft', subkey.getName()):
+                        currentKey = subkey.getSubkey("Active Setup")
+                        finalKey = currentKey.getSubkey("Installed Components")
+
+                        self.log(Level.INFO, "Current Key: " + finalKey.getName())
+                        for setupkey in finalKey.getSubkeyList():
+                            self.log(Level.INFO, "Parsing " + setupkey.getName())
+
+                            values = {}
+                            for skValue in servicekey.getValueList():
+                                regType = str(skValue.getValueType())
+                                if regType in ["REG_EXPAND_SZ", "REG_SZ"]:
+                                    values[skValue.getName()] = skValue.getValue().getAsString()
+                                elif regType in ["REG_DWORD", "REG_QWORD", "REG_BIG_ENDIAN"]:
+                                    values[skValue.getName()] = skValue.getValue().getAsNumber()
+                                elif regType == "REG_MULTI_SZ":
+                                    values[skValue.getName()] = list(skValue.getValue().getAsStringList())
+
+                            name = values.get("(Default)", "")
+                            componentid = values.get("ComponentID", "")
+                            stubpath = values.get("StubPath", "")
+                            version = values.get("Version", "")
+
+                            art = file.newDataArtifact(artType, Arrays.asList(
+                                BlackboardAttribute(attributeIdActiveSetupName, moduleName, str(name)),
+                                BlackboardAttribute(attributeIdActiveSetupComponentID, moduleName, str(componentid)),
+                                BlackboardAttribute(attributeIdActiveSetupStubpath, moduleName, str(stubpath)),
+                                BlackboardAttribute(attributeIdActiveSetupVersion, moduleName, str(version))
+                            ))
+                            try:
+                                blackboard.postArtifact(art, moduleName)
+                            except Blackboard.BlackboardException as ex:
+                                self.log(Level.SEVERE,
+                                         "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
         pass
 
     # TODO: Write process_Registry_Fixit

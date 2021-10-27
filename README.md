@@ -50,3 +50,4 @@ if you encounter an error whereby the program crashes, high chance whatever file
 - Some outdated python module guide (http://www.osdfcon.org/presentations/2018/Eugene-Livis-Writing-Autopsy-Python-Modules.pdf)
 - This guy has a ton of modules (https://github.com/markmckinnon/Autopsy-Plugins)
 - Rejistry Java file for method reference (https://github.com/williballenthin/Rejistry)
+- More ASEP by mitre (https://attack.mitre.org/techniques/T1547/001/)

@@ -161,6 +161,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
             self.registrySoftwareRunKeys = (
                 'Microsoft/Windows/CurrentVersion/Run', 
                 'Microsoft/Windows/CurrentVersion/RunOnce',
+                'Microsoft/Windows/CurrentVersion/RunOnceEx',
                 'Microsoft/Windows/CurrentVersion/RunServices',
                 'Microsoft/Windows/CurrentVersion/Policies/Explorer/Run',
                 'WOW6432Node/Microsoft/Windows/CurrentVersion/Run',
@@ -168,6 +169,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 'WOW6432Node/Microsoft/Windows/CurrentVersion/Policies/Explorer/Run',
                 'Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/Run',
                 'Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnce',
+                'Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnceEx',
                 'Microsoft/Windows NT/CurrentVersion/Image File Execution Options',
                 #'Classes/CLSID',
                 'Microsoft/Windows NT/CurrentVersion/AppCombatFlags',
@@ -186,7 +188,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 'Software/Microsoft/Windows NT/CurrentVersion/Run',
                 'Software/Microsoft/Windows NT/CurrentVersion/Windows/Load',
                 'Software/Microsoft/Windows NT/CurrentVersion/Windows/Run',
-                'Software/Microsoft/Windows NT/CurrentVersion/Winlogon/Shell',
+                'Software/Microsoft/Windows NT/CurrentVersion/Winlogon/Shell',                
                 'Software/Microsoft/Windows/CurrentVersion/Policies/Explorer/Run',
                 'Software/Microsoft/Windows/CurrentVersion/Policies/System/Shell',
                 'Software/Policies/Microsoft/Windows/System/Scripts/Logon',
@@ -198,6 +200,12 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 'Software/Classes/Applications',
                 'Software/Classes/CLSID'
             )
+
+            self.registryStartupFolder {
+                'Microsoft/Windows/CurrentVersion/Explorer/User Shell Folders' : 'Startup',
+                'Microsoft/Windows/CurrentVersion/Explorer/Shell Folders' : 'Startup',
+            }
+
         if self.local_settings.getSetting('Winlogon') == 'true':
             self.log(Level.INFO, "Winlogon ==> " + str(self.local_settings.getSetting('Winlogon')))
          
@@ -489,6 +497,37 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                                     BlackboardAttribute(attributeIdRunKeyValue, moduleName, str(skVal.getAsString()))
                                 ))
 
+                                # index the artifact for keyword search
+                                try:
+                                    blackboard.postArtifact(art, moduleName)
+                                except Blackboard.BlackboardException as ex:
+                                    self.log(Level.SEVERE, "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
+
+                    for runKey in self.registryStartupFolder:
+                        self.log(Level.INFO, "Finding key: " + runKey)
+                        startupVal = self.registryStartupFolder[runKey]
+
+                        currentKey = self.findRegistryKey(regFile, runKey)
+                        if currentKey and len(currentKey.getValueList()) > 0:
+                            skValues = currentKey.getValueList()
+
+                            for skValue in skValues:
+                                if skValue.getName() == startupVal:
+                                    skName = skValue.getName()
+                                    skVal = skValue.getValue()
+
+                                    art = file.newDataArtifact(artType, Arrays.asList(
+                                        BlackboardAttribute(attributeIdRegKeyUser, moduleName, user),
+                                        BlackboardAttribute(attributeIdRegKeyLoc, moduleName, runKey),
+                                        BlackboardAttribute(attributeIdRunKeyName, moduleName, str(skName)),
+                                        BlackboardAttribute(attributeIdRunKeyValue, moduleName, str(skVal.getAsString()))
+                                    ))
+
+                                    # index the artifact for keyword search
+                                    try:
+                                        blackboard.postArtifact(art, moduleName)
+                                    except Blackboard.BlackboardException as ex:
+                                        self.log(Level.SEVERE, "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
 
                     
                 elif ((file.getName() == 'NTUSER.DAT') and ('/USERS' in file.getParentPath().upper()) and (file.getSize() > 0)):
@@ -508,6 +547,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                     regFileName = os.path.join(tempDir, fileName)
                     regFile = RegistryHiveFile(File(regFileName))
 
+                    # Process NTUser run keys
                     for runKey in self.registryNTUserRunKeys:
                         self.log(Level.INFO, "Finding key: " + runKey)
 
@@ -531,6 +571,35 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                                     blackboard.postArtifact(art, moduleName)
                                 except Blackboard.BlackboardException as ex:
                                     self.log(Level.SEVERE, "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
+
+                    # Process Startup Folder location
+                    for runKey in self.registryStartupFolder:
+                        startupVal = self.registryStartupFolder[runKey]
+                        runKey = 'Software/' + runKey 
+                        
+                        self.log(Level.INFO, "Finding key: " + runKey)
+
+                        currentKey = self.findRegistryKey(regFile, runKey)
+                        if currentKey and len(currentKey.getValueList()) > 0:
+                            skValues = currentKey.getValueList()
+
+                            for skValue in skValues:
+                                if skValue.getName() == startupVal:
+                                    skName = skValue.getName()
+                                    skVal = skValue.getValue()
+
+                                    art = file.newDataArtifact(artType, Arrays.asList(
+                                        BlackboardAttribute(attributeIdRegKeyUser, moduleName, user),
+                                        BlackboardAttribute(attributeIdRegKeyLoc, moduleName, runKey),
+                                        BlackboardAttribute(attributeIdRunKeyName, moduleName, str(skName)),
+                                        BlackboardAttribute(attributeIdRunKeyValue, moduleName, str(skVal.getAsString()))
+                                    ))
+
+                                    # index the artifact for keyword search
+                                    try:
+                                        blackboard.postArtifact(art, moduleName)
+                                    except Blackboard.BlackboardException as ex:
+                                        self.log(Level.SEVERE, "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
 
 
         #Clean up Autoruns directory and files

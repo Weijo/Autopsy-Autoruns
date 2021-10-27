@@ -16,7 +16,7 @@ Autopsy plugin that scans the Auto-Start Extensibility Points (ASEPs) and list o
     - [x] Services
     - [ ] Active Setup
     - [ ] WinLogon
-    - [ ] Others
+    - [x] Startup Folder
 - [ ] Get GUI to display like autoruns
 - [ ] Write Report
 - [ ] ORD

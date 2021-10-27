@@ -86,6 +86,9 @@ from com.williballenthin.rejistry import RegistryValue
 import json
 import winjob
 
+# Startup Programs imports
+from datetime import datetime
+
 # Factory that defines the name and details of the module and allows Autopsy
 # to create instances of the modules that will do the analysis.
 class AutoRunsModuleFactory(IngestModuleFactoryAdapter):
@@ -229,8 +232,8 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
             # Startup folder
             self.startupProgram = (
-                'C:/ProgramData/Microsoft/Windows/Start Menu/Programs/Startup',     # Startup path for all users
-                '%appdata%/Microsoft/Windows/Start Menu/Programs/Startup'           # Different root folder, same subpath
+                #'/ProgramData/Microsoft/Windows/Start Menu/Programs/Startup',                    # Startup path for all users
+                '%/Microsoft/Windows/Start Menu/Programs/Startup'      # Startup path for current user
             )
 
         if self.local_settings.getSetting('CLSID') == 'true':
@@ -666,9 +669,9 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         skCase = Case.getCurrentCase().getSleuthkitCase()
         blackboard = Case.getCurrentCase().getSleuthkitCase().getBlackboard()
         fileManager = Case.getCurrentCase().getServices().getFileManager()
-
+        
         # Create autoruns directory in temp directory, if it exists then continue on processing      
-        tempDir = os.path.join(Case.getCurrentCase().getTempDirectory(), "Autoruns/startup")
+        tempDir = os.path.join(Case.getCurrentCase().getTempDirectory(), "Autoruns")
         self.log(Level.INFO, "create Directory " + tempDir)
         try:
             os.mkdir(tempDir)
@@ -691,11 +694,20 @@ class AutoRunsIngestModule(DataSourceIngestModule):
             )
         except:     
            self.log(Level.INFO, "Attributes Creation Error, TSK_STARTUP_PROGRAMS_FILE_PATH, May already exist. ")
+        
+        try:
+            attributeIdScheduledTasksURI = skCase.addArtifactAttributeType(
+                "TSK_STARTUP_PROGRAMS_FILE_SIZE",
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                "File Size"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_STARTUP_PROGRAMS_FILE_SIZE, May already exist. ")
 
         try:
             attributeIdScheduledTasksStatus = skCase.addArtifactAttributeType(
                 "TSK_STARTUP_PROGRAMS_DATE_CREATED",
-                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.DATETIME,
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
                 "Date Created"
             )
         except:     
@@ -704,7 +716,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         try:
            attributeIdScheduledTasksCommand = skCase.addArtifactAttributeType(
                 "TSK_STARTUP_PROGRAMS_DATE_MODIFIED", 
-                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.DATETIME, 
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
                 "Date Modified"
             )
         except:     
@@ -713,13 +725,14 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         try:
            attributeIdScheduledTasksTrigger = skCase.addArtifactAttributeType(
                 "TSK_STARTUP_PROGRAMS_DATE_ACCESSED", 
-                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.DATETIME, 
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
                 "Date Accessed"
             )
         except:     
            self.log(Level.INFO, "Attributes Creation Error, TSK_STARTUP_PROGRAMS_DATE_ACCESSED, May already exist. ")
-
+        
         attributeIdStartUpProgramsFilePath = skCase.getAttributeType("TSK_STARTUP_PROGRAMS_FILE_PATH")
+        attributeIdStartUpProgramsFileSize = skCase.getAttributeType("TSK_STARTUP_PROGRAMS_FILE_SIZE")
         attributeIdStartUpProgramsDateCreated = skCase.getAttributeType("TSK_STARTUP_PROGRAMS_DATE_CREATED")
         attributeIdStartUpProgramsDateModified = skCase.getAttributeType("TSK_STARTUP_PROGRAMS_DATE_MODIFIED")
         attributeIdStartUpProgramsDateAccessed = skCase.getAttributeType("TSK_STARTUP_PROGRAMS_DATE_ACCESSED")
@@ -728,7 +741,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
         # Get Startup Program files
         filesTemp = fileManager.findFiles(dataSource, "%", self.startupProgram)
-
+        
         for file in filesTemp:
 
             # check if cancel was pressed
@@ -740,30 +753,26 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
                 # Save the file locally in the temp folder.
                 self.writeHiveFile(file, file.getName(), tempDir)
-                # terr continue here
                 filePath = os.path.join(tempDir, file.getName())
 
-                file_path = data["uri"]
-                date_created = data["triggers"][0]["Enabled"] if data["triggers"] else ""
-                date_modified = data["actions"][0]["Command"] if "Command" in data["actions"][0] else ""
-                date_accessed = data["triggers"][0]["Type"] if data["triggers"] else ""
-
-                status = "Enabled" if enabled == "true" else "Disabled" if enabled == "false" else "" 
-
-                # self.log(Level.INFO, "File: " + file.getName() +  
-                #     "\nURI: " + uri + 
-                #     "\nStatus: " + status +
-                #     "\nCommand: " + command + 
-                #     "\nTrigger: " + trigger
-                # )
-
+                file_path = self.startupProgram
+                file_size = os.path.getsize(filePath)
+                #date_created = datetime.utcfromtimestamp(os.path.getctime(filePath)).strftime('%Y-%m-%d %H:%M:%S')
+                date_created = datetime.utcfromtimestamp(os.path.getctime(filePath)).strftime('%Y-%m-%d %H:%M:%S')
+                date_modified = datetime.utcfromtimestamp(os.path.getmtime(filePath)).strftime('%Y-%m-%d %H:%M:%S')
+                date_accessed = datetime.utcfromtimestamp(os.path.getatime(filePath)).strftime('%Y-%m-%d %H:%M:%S')
+                
+                # status = "Enabled" if enabled == "true" else "Disabled" if enabled == "false" else "" 
+        
                 art = file.newDataArtifact(artType, Arrays.asList(
-                    BlackboardAttribute(attributeIdStartUpProgramsFilePath, moduleName, file_path),
-                    BlackboardAttribute(attributeIdStartUpProgramsDateCreated, moduleName, date_created),
-                    BlackboardAttribute(attributeIdStartUpProgramsDateModified, moduleName, date_modified),
-                    BlackboardAttribute(attributeIdStartUpProgramsDateAccessed, moduleName, date_accessed),
+                    BlackboardAttribute(attributeIdStartUpProgramsDateCreated, moduleName, str(date_created)),
+                    BlackboardAttribute(attributeIdStartUpProgramsDateModified, moduleName, str(date_modified)),
+                    BlackboardAttribute(attributeIdStartUpProgramsDateAccessed, moduleName, str(date_accessed)),
+                    BlackboardAttribute(attributeIdStartUpProgramsFileSize, moduleName, str(file_size)),
+                    BlackboardAttribute(attributeIdStartUpProgramsFilePath, moduleName, file_path)
                 ))
 
+                
                 # index the artifact for keyword search
                 try:
                     blackboard.postArtifact(art, moduleName)
@@ -801,33 +810,6 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         except:
             self.log(Level.INFO, "Unable to parse key: " + key)
             return None
-
-    def getFileMetadata(self, fileName):
-        # this gets file path and me
-        fileRecord = 0
-    
-        with open(fileName, "rb") as file: 
-            fileRecord = file.read()
-
-        fileHeader = int(str(struct.unpack_from('<q', fileRecord[0:])[0]))
-        #print ("File Header > " + str(fileHeader))
-
-        if (fileHeader == 2):
-           fileSize = int(str(struct.unpack_from('<q', fileRecord[8:])[0]))
-           deleteTimeStamp = int(str(struct.unpack_from('<q', fileRecord[16:])[0])[0:11]) - 11644473600
-           fileNameLength = int(str(struct.unpack_from('<l', fileRecord[24:])[0]))
-           nameLength = "<" + str(fileNameLength * 2) + "s"
-           fileName = struct.unpack_from(nameLength, fileRecord[28:])[0]
-           fileNamePath = self.utf16decode(fileName)
-           return fileNamePath, deleteTimeStamp
-        else:
-           fileSize = int(str(struct.unpack_from('<q', fileRecord[8:])[0]))
-           deleteTimeStamp = int(str(struct.unpack_from('<q', fileRecord[16:])[0])[0:11]) - 11644473600
-           fileName = str(struct.unpack_from('<520s', fileRecord[24:])[0]) 
-           fileNamePath = self.utf16decode(fileName)
-           return fileNamePath, deleteTimeStamp
-
-        return None, None
     
 # UI that is shown to user for each ingest job so they can configure the job.
 class AutorunsWithUISettingsPanel(IngestModuleIngestJobSettingsPanel):

@@ -176,6 +176,13 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 'Windows/CurrentVersion/Explorer/Browser Helper Objects'
             )
 
+            # HKLM\System\CurrentControlSet
+            self.registrySystemRunKeys = {
+                'Control/SafeBoot' : 'AlternateShell',
+                'Control/Terminal Server/wds/rdpwd': 'StartupPrograms',
+                'Control/Terminal Server/WinStations/RDP-Tcp': 'InitialProgram',
+            }
+
             # HKCU\
             self.registryNTUserRunKeys = (
                 'Software/Microsoft/Windows/CurrentVersion/Run', 
@@ -196,14 +203,18 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/Policies/Explorer/Run',
                 'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/Run',
                 'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/RunOnce',
-                'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/RunOnc',
                 'Software/Classes/Applications',
                 'Software/Classes/CLSID'
             )
 
-            self.registryStartupFolder {
-                'Microsoft/Windows/CurrentVersion/Explorer/User Shell Folders' : 'Startup',
-                'Microsoft/Windows/CurrentVersion/Explorer/Shell Folders' : 'Startup',
+            self.registryUserStartupFolder = {
+                'Software/Microsoft/Windows/CurrentVersion/Explorer/User Shell Folders' : 'Startup',
+                'Software/Microsoft/Windows/CurrentVersion/Explorer/Shell Folders' : 'Startup',
+            }
+
+            self.registrySoftwareStartupFolder = {
+                'Microsoft/Windows/CurrentVersion/Explorer/User Shell Folders' : 'Common Startup',
+                'Microsoft/Windows/CurrentVersion/Explorer/Shell Folders' : 'Common Startup',
             }
 
         if self.local_settings.getSetting('Winlogon') == 'true':
@@ -388,7 +399,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         progressBar.progress("Finding Registry Run Keys")
 
         # Hives files to extract
-        filesToExtract = ("NTUSER.DAT", "SOFTWARE")
+        filesToExtract = ("NTUSER.DAT", "SOFTWARE", "SYSTEM")
 
         # Create autoruns directory in temp directory, if it exists then continue on processing      
         tempDir = os.path.join(Case.getCurrentCase().getTempDirectory(), "Autoruns")
@@ -478,11 +489,12 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                     
                     regFileName = os.path.join(tempDir, file.getName())
                     regFile = RegistryHiveFile(File(regFileName))
+                    rootKey = regFile.getRoot()
 
                     for runKey in self.registrySoftwareRunKeys:
                         self.log(Level.INFO, "Finding key: " + runKey)
 
-                        currentKey = self.findRegistryKey(regFile, runKey)
+                        currentKey = self.findRegistryKey(rootKey, runKey)
                         if currentKey and len(currentKey.getValueList()) > 0:
                             skValues = currentKey.getValueList()
 
@@ -503,11 +515,12 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                                 except Blackboard.BlackboardException as ex:
                                     self.log(Level.SEVERE, "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
 
-                    for runKey in self.registryStartupFolder:
+                    # Process Startup Folder location
+                    for runKey in self.registrySoftwareStartupFolder:
                         self.log(Level.INFO, "Finding key: " + runKey)
-                        startupVal = self.registryStartupFolder[runKey]
+                        startupVal = self.registrySoftwareStartupFolder[runKey]
 
-                        currentKey = self.findRegistryKey(regFile, runKey)
+                        currentKey = self.findRegistryKey(rootKey, runKey)
                         if currentKey and len(currentKey.getValueList()) > 0:
                             skValues = currentKey.getValueList()
 
@@ -546,12 +559,13 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                     
                     regFileName = os.path.join(tempDir, fileName)
                     regFile = RegistryHiveFile(File(regFileName))
+                    rootKey = regFile.getRoot()
 
                     # Process NTUser run keys
                     for runKey in self.registryNTUserRunKeys:
                         self.log(Level.INFO, "Finding key: " + runKey)
 
-                        currentKey = self.findRegistryKey(regFile, runKey)
+                        currentKey = self.findRegistryKey(rootKey, runKey)
                         if currentKey and len(currentKey.getValueList()) > 0:
                             skValues = currentKey.getValueList()
 
@@ -573,13 +587,11 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                                     self.log(Level.SEVERE, "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
 
                     # Process Startup Folder location
-                    for runKey in self.registryStartupFolder:
-                        startupVal = self.registryStartupFolder[runKey]
-                        runKey = 'Software/' + runKey 
-                        
+                    for runKey in self.registryUserStartupFolder:
                         self.log(Level.INFO, "Finding key: " + runKey)
-
-                        currentKey = self.findRegistryKey(regFile, runKey)
+                        startupVal = self.registryUserStartupFolder[runKey]
+                
+                        currentKey = self.findRegistryKey(rootKey, runKey)
                         if currentKey and len(currentKey.getValueList()) > 0:
                             skValues = currentKey.getValueList()
 
@@ -600,6 +612,49 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                                         blackboard.postArtifact(art, moduleName)
                                     except Blackboard.BlackboardException as ex:
                                         self.log(Level.SEVERE, "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
+
+                elif ((file.getName() == 'SYSTEM') and (file.getParentPath().upper() == '/WINDOWS/SYSTEM32/CONFIG/') and (file.getSize() > 0)): 
+                    # Save the file locally in the temp folder. 
+                    self.writeHiveFile(file, file.getName(), tempDir)
+                    
+                    # Process HKLM Software file looking thru the run keys
+                    user = "System"
+                    self.log(Level.INFO, "SYSTEM hive exists, parsing it")
+                    
+                    regFileName = os.path.join(tempDir, file.getName())
+                    regFile = RegistryHiveFile(File(regFileName))
+
+                    # Find ControlSets
+                    rootKey = regFile.getRoot()
+                    subkeys = rootKey.getSubkeyList()
+                    for subkey in subkeys:
+                        if re.match(r'.*ControlSet.*', subkey.getName()):
+                            for runKey in self.registrySystemRunKeys:
+                                self.log(Level.INFO, "Finding key: " + runKey)
+                                filterVal = self.registrySystemRunKeys[runKey]
+
+                                currentKey = self.findRegistryKey(subkey, runKey)
+                                if currentKey and len(currentKey.getValueList()) > 0:
+                                    skValues = currentKey.getValueList()
+
+                                    for skValue in skValues:
+                                        if skValue.getName() == filterVal:
+                                            skName = skValue.getName()
+                                            skVal = skValue.getValue()
+
+                                            art = file.newDataArtifact(artType, Arrays.asList(
+                                                BlackboardAttribute(attributeIdRegKeyUser, moduleName, user),
+                                                BlackboardAttribute(attributeIdRegKeyLoc, moduleName, subkey.getName() + "/" + runKey),
+                                                BlackboardAttribute(attributeIdRunKeyName, moduleName, str(skName)),
+                                                BlackboardAttribute(attributeIdRunKeyValue, moduleName, str(skVal.getAsString()))
+                                            ))
+
+                                            # index the artifact for keyword search
+                                            try:
+                                                blackboard.postArtifact(art, moduleName)
+                                            except Blackboard.BlackboardException as ex:
+                                                self.log(Level.SEVERE, "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
+                        
 
 
         #Clean up Autoruns directory and files
@@ -727,8 +782,8 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 regFile = RegistryHiveFile(File(regFileName))
 
                 # Find ControlSets
-                rootkey = regFile.getRoot()
-                subkeys = rootkey.getSubkeyList()
+                rootKey = regFile.getRoot()
+                subkeys = rootKey.getSubkeyList()
                 for subkey in subkeys:
                     if re.match(r'.*ControlSet.*', subkey.getName()):
                         currentkey = subkey.getSubkey("Services")
@@ -861,6 +916,24 @@ class AutoRunsIngestModule(DataSourceIngestModule):
            self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_URI, May already exist. ")
 
         try:
+           attributeIdScheduledTasksDescription = skCase.addArtifactAttributeType(
+                "TSK_SCHEDULED_TASKS_DESCRIPTION", 
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
+                "Description"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_DESCRIPTION, May already exist. ")
+
+        try:
+           attributeIdScheduledTasksDate = skCase.addArtifactAttributeType(
+                "TSK_SCHEDULED_TASKS_DATE", 
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
+                "Date"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_DATE, May already exist. ")
+
+        try:
             attributeIdScheduledTasksStatus = skCase.addArtifactAttributeType(
                 "TSK_SCHEDULED_TASKS_STATUS",
                 BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
@@ -877,15 +950,33 @@ class AutoRunsIngestModule(DataSourceIngestModule):
             )
         except:     
            self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_COMMAND, May already exist. ")
-        
+
         try:
-           attributeIdScheduledTasksTrigger = skCase.addArtifactAttributeType(
-                "TSK_SCHEDULED_TASKS_TRIGGER", 
+           attributeIdScheduledTasksActions = skCase.addArtifactAttributeType(
+                "TSK_SCHEDULED_TASKS_ACTIONS", 
                 BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
-                "Trigger"
+                "Actions"
             )
         except:     
-           self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_TRIGGER, May already exist. ")
+           self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_COMMAND, May already exist. ")
+        
+        try:
+           attributeIdScheduledTasksTriggers = skCase.addArtifactAttributeType(
+                "TSK_SCHEDULED_TASKS_TRIGGERS", 
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
+                "Triggers"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_TRIGGERS, May already exist. ")
+
+        try:
+           attributeIdScheduledTasksHidden = skCase.addArtifactAttributeType(
+                "TSK_SCHEDULED_TASKS_HIDDEN", 
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING, 
+                "Hidden"
+            )
+        except:     
+           self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_HIDDEN, May already exist. ")
         
         try:
            attributeIdScheduledTasksDump = skCase.addArtifactAttributeType(
@@ -897,24 +988,21 @@ class AutoRunsIngestModule(DataSourceIngestModule):
            self.log(Level.INFO, "Attributes Creation Error, TSK_SCHEDULED_TASKS_DUMP, May already exist. ")
 
         attributeIdScheduledTasksURI = skCase.getAttributeType("TSK_SCHEDULED_TASKS_URI")
+        attributeIdScheduledTasksDescription = skCase.getAttributeType("TSK_SCHEDULED_TASKS_DESCRIPTION")
+        attributeIdScheduledTasksDate = skCase.getAttributeType("TSK_SCHEDULED_TASKS_DATE")
         attributeIdScheduledTasksStatus = skCase.getAttributeType("TSK_SCHEDULED_TASKS_STATUS")
         attributeIdScheduledTasksCommand = skCase.getAttributeType("TSK_SCHEDULED_TASKS_COMMAND")
-        attributeIdScheduledTasksTrigger = skCase.getAttributeType("TSK_SCHEDULED_TASKS_TRIGGER")
+        attributeIdScheduledTasksActions = skCase.getAttributeType("TSK_SCHEDULED_TASKS_ACTIONS")
+        attributeIdScheduledTasksTriggers = skCase.getAttributeType("TSK_SCHEDULED_TASKS_TRIGGERS")
+        attributeIdScheduledTasksHidden = skCase.getAttributeType("TSK_SCHEDULED_TASKS_HIDDEN")
         attributeIdScheduledTasksDump = skCase.getAttributeType("TSK_SCHEDULED_TASKS_DUMP")
 
         moduleName = AutoRunsModuleFactory.moduleName
-
-
 
         # Get Scheduled Task files
         filesTemp = fileManager.findFiles(dataSource, "%", self.ScheduledTasksLoc)
 
         for file in filesTemp:
-
-            # Check if the user pressed cancel while we were busy
-            if self.context.isJobCancelled():
-                return IngestModule.ProcessResult.OK
-
             if (not file.isDir()):
                 #self.log(Level.INFO, "Working on: "  + file.getParentPath() + file.getName())
 
@@ -932,9 +1020,13 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                     data = task.parse()
 
                     uri = data["uri"]
+                    description = data["description"] if data["description"] else ""
+                    date = data["date"] if data["date"] else ""
                     enabled = data["triggers"][0]["Enabled"] if data["triggers"] else ""
                     command = data["actions"][0]["Command"] if "Command" in data["actions"][0] else ""
-                    trigger = data["triggers"][0]["Type"] if data["triggers"] else ""
+                    actions = data["actions"][0] if data["actions"] else ""
+                    triggers = data["triggers"][0] if data["triggers"] else ""
+                    hidden = data["hidden"] if data["hidden"] else ""
 
                     status = "Enabled" if enabled == "true" else "Disabled" if enabled == "false" else "" 
 
@@ -945,19 +1037,25 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                     #     "\nTrigger: " + trigger
                     # )
 
-                    art = file.newDataArtifact(artType, Arrays.asList(
-                        BlackboardAttribute(attributeIdScheduledTasksURI, moduleName, uri),
-                        BlackboardAttribute(attributeIdScheduledTasksStatus, moduleName, status),
-                        BlackboardAttribute(attributeIdScheduledTasksCommand, moduleName, command),
-                        BlackboardAttribute(attributeIdScheduledTasksTrigger, moduleName, trigger),
-                        BlackboardAttribute(attributeIdScheduledTasksDump, moduleName, json.dumps(task.parse(), indent=2))
-                    ))
+                    # Don't index empty commands
+                    if command != "":
+                        art = file.newDataArtifact(artType, Arrays.asList(
+                            BlackboardAttribute(attributeIdScheduledTasksURI, moduleName, uri),
+                            BlackboardAttribute(attributeIdScheduledTasksDescription, moduleName, description),
+                            BlackboardAttribute(attributeIdScheduledTasksDate, moduleName, date),
+                            BlackboardAttribute(attributeIdScheduledTasksStatus, moduleName, status),
+                            BlackboardAttribute(attributeIdScheduledTasksCommand, moduleName, command),
+                            BlackboardAttribute(attributeIdScheduledTasksActions, moduleName, json.dumps(actions, indent=2)),
+                            BlackboardAttribute(attributeIdScheduledTasksTriggers, moduleName, json.dumps(triggers, indent=2)),
+                            BlackboardAttribute(attributeIdScheduledTasksHidden, moduleName, hidden),
+                            BlackboardAttribute(attributeIdScheduledTasksDump, moduleName, json.dumps(task.parse(), indent=2))
+                        ))
 
-                    # index the artifact for keyword search
-                    try:
-                        blackboard.postArtifact(art, moduleName)
-                    except Blackboard.BlackboardException as ex:
-                        self.log(Level.SEVERE, "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
+                        # index the artifact for keyword search
+                        try:
+                            blackboard.postArtifact(art, moduleName)
+                        except Blackboard.BlackboardException as ex:
+                            self.log(Level.SEVERE, "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
 
 
         #Clean up Autoruns directory and files
@@ -1106,6 +1204,15 @@ class AutoRunsIngestModule(DataSourceIngestModule):
     def process_CLSID(self, dataSource, progressBar):
         pass
 
+    def shutDown(self):
+        #Clean up Autoruns directory and files
+
+        tempDir = os.path.join(Case.getCurrentCase().getTempDirectory(), "Autoruns")
+        try:
+            shutil.rmtree(tempDir)      
+        except:
+            self.log(Level.INFO, "removal of directory tree failed " + tempDir)
+
     ####################
     # Helper Functions #
     ####################
@@ -1114,9 +1221,8 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         filePath = os.path.join(tempDir, fileName)
         ContentUtils.writeToFile(file, File(filePath))
 
-    def findRegistryKey(self, registryHiveFile, registryKey):
+    def findRegistryKey(self, rootKey, registryKey):
         # Search for the registry key
-        rootKey = registryHiveFile.getRoot()
         regKeyList = registryKey.split('/')
         currentKey = rootKey
         try:

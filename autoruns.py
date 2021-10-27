@@ -182,9 +182,19 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 'Software/Microsoft/Windows/CurrentVersion/RunServicesOnce',
                 'Software/Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/Run',
                 'Software/Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnce',
+                'Software/Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnceEx',
                 'Software/Microsoft/Windows NT/CurrentVersion/Run',
+                'Software/Microsoft/Windows NT/CurrentVersion/Windows/Load',
+                'Software/Microsoft/Windows NT/CurrentVersion/Windows/Run',
+                'Software/Microsoft/Windows NT/CurrentVersion/Winlogon/Shell',
+                'Software/Microsoft/Windows/CurrentVersion/Policies/Explorer/Run',
+                'Software/Microsoft/Windows/CurrentVersion/Policies/System/Shell',
+                'Software/Policies/Microsoft/Windows/System/Scripts/Logon',
+                'Software/Policies/Microsoft/Windows/System/Scripts/Logoff'
                 'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/Policies/Explorer/Run',
                 'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/Run',
+                'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/RunOnce',
+                'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/RunOnc',
                 'Software/Classes/Applications',
                 'Software/Classes/CLSID'
             )

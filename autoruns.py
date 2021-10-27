@@ -397,6 +397,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         progressBar.switchToIndeterminate()
 
         progressBar.progress("Finding Registry Run Keys")
+        self.log(Level.INFO, "Processing Registry Run Keys")
 
         # Hives files to extract
         filesToExtract = ("NTUSER.DAT", "SOFTWARE", "SYSTEM")
@@ -492,7 +493,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                     rootKey = regFile.getRoot()
 
                     for runKey in self.registrySoftwareRunKeys:
-                        self.log(Level.INFO, "Finding key: " + runKey)
+                        #self.log(Level.INFO, "Finding key: " + runKey)
 
                         currentKey = self.findRegistryKey(rootKey, runKey)
                         if currentKey and len(currentKey.getValueList()) > 0:
@@ -517,7 +518,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
                     # Process Startup Folder location
                     for runKey in self.registrySoftwareStartupFolder:
-                        self.log(Level.INFO, "Finding key: " + runKey)
+                        #self.log(Level.INFO, "Finding key: " + runKey)
                         startupVal = self.registrySoftwareStartupFolder[runKey]
 
                         currentKey = self.findRegistryKey(rootKey, runKey)
@@ -546,7 +547,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 elif ((file.getName() == 'NTUSER.DAT') and ('/USERS' in file.getParentPath().upper()) and (file.getSize() > 0)):
                 # Found a NTUSER.DAT file to process only want files in User directories
                     # Filename may not be unique so add file id to the name
-                    fileName = str(file.getId()) + "-" + file.getName()                    
+                    fileName = str(file.getId()) + "-" + file.getName()
                     
                     # Save the file locally in the temp folder.
                     self.writeHiveFile(file, fileName, tempDir)
@@ -563,7 +564,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
                     # Process NTUser run keys
                     for runKey in self.registryNTUserRunKeys:
-                        self.log(Level.INFO, "Finding key: " + runKey)
+                        #self.log(Level.INFO, "Finding key: " + runKey)
 
                         currentKey = self.findRegistryKey(rootKey, runKey)
                         if currentKey and len(currentKey.getValueList()) > 0:
@@ -588,7 +589,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
                     # Process Startup Folder location
                     for runKey in self.registryUserStartupFolder:
-                        self.log(Level.INFO, "Finding key: " + runKey)
+                        #self.log(Level.INFO, "Finding key: " + runKey)
                         startupVal = self.registryUserStartupFolder[runKey]
                 
                         currentKey = self.findRegistryKey(rootKey, runKey)
@@ -630,7 +631,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                     for subkey in subkeys:
                         if re.match(r'.*ControlSet.*', subkey.getName()):
                             for runKey in self.registrySystemRunKeys:
-                                self.log(Level.INFO, "Finding key: " + runKey)
+                                #self.log(Level.INFO, "Finding key: " + runKey)
                                 filterVal = self.registrySystemRunKeys[runKey]
 
                                 currentKey = self.findRegistryKey(subkey, runKey)
@@ -674,6 +675,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         progressBar.switchToIndeterminate()
 
         progressBar.progress("Finding Services")
+        self.log(Level.INFO, "Processing Services")
 
         # Create autoruns directory in temp directory, if it exists then continue on processing      
         tempDir = os.path.join(Case.getCurrentCase().getTempDirectory(), "Autoruns")
@@ -790,7 +792,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
                         self.log(Level.INFO, "Current Key: " + currentkey.getName())
                         for servicekey in currentkey.getSubkeyList():
-                            self.log(Level.INFO, "Parsing " + servicekey.getName())
+                            #self.log(Level.INFO, "Parsing " + servicekey.getName())
                             
                             # Store values in dictionary
                             values = {}
@@ -883,6 +885,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         progressBar.switchToIndeterminate()
 
         progressBar.progress("Finding Scheduled Tasks")
+        self.log(Level.INFO, "Processing Scheduled Tasks")
 
         # Set the database to be read to the once created by the prefetch parser program
         skCase = Case.getCurrentCase().getSleuthkitCase()
@@ -1078,6 +1081,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         progressBar.switchToIndeterminate()
 
         progressBar.progress("Finding Startup Programs")
+        self.log(Level.INFO, "Processing Startup Programs")
 
         # Set the database to be read to the once created by the prefetch parser program
         skCase = Case.getCurrentCase().getSleuthkitCase()
@@ -1219,7 +1223,10 @@ class AutoRunsIngestModule(DataSourceIngestModule):
     def writeHiveFile(self, file, fileName, tempDir):
         # Write the file to the temp directory.  
         filePath = os.path.join(tempDir, fileName)
-        ContentUtils.writeToFile(file, File(filePath))
+        if not os.path.isfile(filePath):
+            ContentUtils.writeToFile(file, File(filePath))
+        else:
+            self.log(Level.INFO, filePath + " Exists, not writing it.")
 
     def findRegistryKey(self, rootKey, registryKey):
         # Search for the registry key

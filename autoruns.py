@@ -1138,7 +1138,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
         files = fileManager.findFiles(dataSource, "SOFTWARE", "/Windows/System32/Config")
         numfiles = len(files)
-        progressBar.switchToIndeterminate(numfiles)
+        progressBar.switchToDeterminate(numfiles)
 
         for file in files:
             if self.context.isJobCancelled():

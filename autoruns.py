@@ -1129,10 +1129,21 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         except:
             self.log(Level.INFO, "Attributes Creation Error, TSK_ACTIVE_SETUP_VERSION, May already exist. ")
 
+        try:
+            attributeIdActiveSetupTimeStamp = skCase.addArtifactAttributeType(
+                "TSK_ACTIVE_SETUP_TIMESTAMP",
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                "Timestamp"
+            )
+        except:
+            self.log(Level.INFO, "Attributes Creation Error, TSK_ACTIVE_SETUP_TIMESTAMP, May already exist. ")
+
+
         attributeIdActiveSetupName = skCase.getAttributeType("TSK_ACTIVE_SETUP_NAME")
         attributeIdActiveSetupStubpath = skCase.getAttributeType("TSK_ACTIVE_SETUP_STUBPATH")
         attributeIdActiveSetupComponentID = skCase.getAttributeType("TSK_ACTIVE_SETUP_COMPONENTID")
         attributeIdActiveSetupVersion = skCase.getAttributeType("TSK_ACTIVE_SETUP_VERSION")
+        attributeIdActiveSetupTimeStamp = skCase.getAttributeType("TSK_ACTIVE_SETUP_TIMESTAMP")
 
         moduleName = AutoRunsModuleFactory.moduleName
 
@@ -1174,16 +1185,18 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                                 elif regType == "REG_MULTI_SZ":
                                     values[skValue.getName()] = list(skValue.getValue().getAsStringList())
 
-                            name = values.get("(Default)", "")
+                            name = values.get("", "")
                             componentid = values.get("ComponentID", "")
                             stubpath = values.get("StubPath", "")
                             version = values.get("Version", "")
+                            timestamp = setupkey.getTimestamp()
 
                             art = file.newDataArtifact(artType, Arrays.asList(
                                 BlackboardAttribute(attributeIdActiveSetupName, moduleName, str(name)),
                                 BlackboardAttribute(attributeIdActiveSetupComponentID, moduleName, str(componentid)),
                                 BlackboardAttribute(attributeIdActiveSetupStubpath, moduleName, str(stubpath)),
-                                BlackboardAttribute(attributeIdActiveSetupVersion, moduleName, str(version))
+                                BlackboardAttribute(attributeIdActiveSetupVersion, moduleName, str(version)),
+                                BlackboardAttribute(attributeIdActiveSetupTimeStamp, moduleName, str(timestamp.toZonedDateTime))
                             ))
                             try:
                                 blackboard.postArtifact(art, moduleName)

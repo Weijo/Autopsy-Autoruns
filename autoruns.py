@@ -1165,7 +1165,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                             self.log(Level.INFO, "Parsing " + setupkey.getName())
 
                             values = {}
-                            for skValue in servicekey.getValueList():
+                            for skValue in setupkey.getValueList():
                                 regType = str(skValue.getValueType())
                                 if regType in ["REG_EXPAND_SZ", "REG_SZ"]:
                                     values[skValue.getName()] = skValue.getValue().getAsString()

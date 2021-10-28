@@ -1189,14 +1189,15 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                             componentid = values.get("ComponentID", "")
                             stubpath = values.get("StubPath", "")
                             version = values.get("Version", "")
-                            timestamp = setupkey.getTimestamp()
+                            timeobj = setupkey.getTimestamp
+                            timestamp = timeobj.getTime()
 
                             art = file.newDataArtifact(artType, Arrays.asList(
                                 BlackboardAttribute(attributeIdActiveSetupName, moduleName, str(name)),
                                 BlackboardAttribute(attributeIdActiveSetupComponentID, moduleName, str(componentid)),
                                 BlackboardAttribute(attributeIdActiveSetupStubpath, moduleName, str(stubpath)),
                                 BlackboardAttribute(attributeIdActiveSetupVersion, moduleName, str(version)),
-                                BlackboardAttribute(attributeIdActiveSetupTimeStamp, moduleName, str(timestamp.toZonedDateTime))
+                                BlackboardAttribute(attributeIdActiveSetupTimeStamp, moduleName, str(timestamp))
                             ))
                             try:
                                 blackboard.postArtifact(art, moduleName)

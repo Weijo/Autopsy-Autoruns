@@ -55,3 +55,4 @@ if you encounter an error whereby the program crashes, high chance whatever file
 - Another Startup locations reference (https://www.anvir.com/windows-startup-programs-xp.htm)
 - Active Setup Explained - (https://helgeklein.com/blog/active-setup-explained/)
 - Windows registry persistence search order (https://blogs.blackberry.com/en/2013/09/windows-registry-persistence-part-2-the-run-keys-and-search-order)
+- More ASEP locations (https://dfirtnt.wordpress.com/registry-persistence-paths/)

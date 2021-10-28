@@ -170,10 +170,10 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 'Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/Run',
                 'Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnce',
                 'Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnceEx',
-                'Microsoft/Windows NT/CurrentVersion/Image File Execution Options',
+                #'Microsoft/Windows NT/CurrentVersion/Image File Execution Options',
                 #'Classes/CLSID',
-                'Microsoft/Windows NT/CurrentVersion/AppCombatFlags',
-                'Windows/CurrentVersion/Explorer/Browser Helper Objects'
+                #'Microsoft/Windows NT/CurrentVersion/AppCombatFlags',
+                #'Windows/CurrentVersion/Explorer/Browser Helper Objects'
             )
 
             # HKLM\System\CurrentControlSet
@@ -194,8 +194,9 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 'Software/Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnceEx',
                 'Software/Microsoft/Windows NT/CurrentVersion/Run',
                 'Software/Microsoft/Windows NT/CurrentVersion/Windows/Load',
+                'Software/Microsoft/Windows NT/CurrentVersion/Windows/ShellServiceObjectDelayLoad$',
                 'Software/Microsoft/Windows NT/CurrentVersion/Windows/Run',
-                'Software/Microsoft/Windows NT/CurrentVersion/Winlogon/Shell',                
+                'Software/Microsoft/Windows NT/CurrentVersion/Winlogon/Shell',
                 'Software/Microsoft/Windows/CurrentVersion/Policies/Explorer/Run',
                 'Software/Microsoft/Windows/CurrentVersion/Policies/System/Shell',
                 'Software/Policies/Microsoft/Windows/System/Scripts/Logon',
@@ -203,18 +204,19 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/Policies/Explorer/Run',
                 'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/Run',
                 'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/RunOnce',
-                'Software/Classes/Applications',
-                'Software/Classes/CLSID'
+                #'Software/Classes/Applications',
+                #'Software/Classes/CLSID'
             )
 
-            self.registryUserStartupFolder = {
+            self.registryUserSpecificKeys = {
                 'Software/Microsoft/Windows/CurrentVersion/Explorer/User Shell Folders' : 'Startup',
                 'Software/Microsoft/Windows/CurrentVersion/Explorer/Shell Folders' : 'Startup',
             }
 
-            self.registrySoftwareStartupFolder = {
+            self.registrySoftwareSpecificKeys = {
                 'Microsoft/Windows/CurrentVersion/Explorer/User Shell Folders' : 'Common Startup',
                 'Microsoft/Windows/CurrentVersion/Explorer/Shell Folders' : 'Common Startup',
+                'Microsoft/Windows NT/CurrentVersion/Windows' : 'AppInit_DLLs'
             }
 
         if self.local_settings.getSetting('Winlogon') == 'true':
@@ -517,9 +519,9 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                                     self.log(Level.SEVERE, "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
 
                     # Process Startup Folder location
-                    for runKey in self.registrySoftwareStartupFolder:
+                    for runKey in self.registrySoftwareSpecificKeys:
                         #self.log(Level.INFO, "Finding key: " + runKey)
-                        startupVal = self.registrySoftwareStartupFolder[runKey]
+                        startupVal = self.registrySoftwareSpecificKeys[runKey]
 
                         currentKey = self.findRegistryKey(rootKey, runKey)
                         if currentKey and len(currentKey.getValueList()) > 0:
@@ -588,9 +590,9 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                                     self.log(Level.SEVERE, "Unable to index blackboard artifact " + str(art.getArtifactTypeName()), ex)
 
                     # Process Startup Folder location
-                    for runKey in self.registryUserStartupFolder:
+                    for runKey in self.registryUserSpecificKeys:
                         #self.log(Level.INFO, "Finding key: " + runKey)
-                        startupVal = self.registryUserStartupFolder[runKey]
+                        startupVal = self.registryUserSpecificKeys[runKey]
                 
                         currentKey = self.findRegistryKey(rootKey, runKey)
                         if currentKey and len(currentKey.getValueList()) > 0:

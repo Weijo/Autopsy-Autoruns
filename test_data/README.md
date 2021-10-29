@@ -7,4 +7,4 @@ Keys generated:
 - [x] HKCU Run / RunOnce
 - [x] Scheduled Tasks
 - [x] Startup Folder
-- [ ] WinLogon
+- [x] WinLogon

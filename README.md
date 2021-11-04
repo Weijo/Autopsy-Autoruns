@@ -3,6 +3,10 @@
 ## Overall Idea
 Autopsy plugin that scans the Auto-Start Extensibility Points (ASEPs) and list out the potential persistences
 
+## Current Capabilities
+
+
+
 ## User Manual
 
 ### Step 1: Clone / Download the repository
@@ -33,6 +37,12 @@ autopsy.log.0 contains the current case log
 Tested on Autopsy 4.19.1
 
 Tested with Microsoft's Windows 10 VMware link here[https://developer.microsoft.com/en-us/windows/downloads/virtual-machines/]
+
+Refer to the test data README[test_data/README.md] for more information
+
+### Test data results
+
+
 
 
 ## References

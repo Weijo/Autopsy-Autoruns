@@ -149,3 +149,4 @@ After running the plugin 6 data artefacts will appear
 - Windows registry persistence search order (https://blogs.blackberry.com/en/2013/09/windows-registry-persistence-part-2-the-run-keys-and-search-order)
 - More ASEP locations (https://dfirtnt.wordpress.com/registry-persistence-paths/)
 - Autoruns program list of ASEP (https://www.microsoftpressstore.com/articles/article.aspx?p=2762082&seqNum=2)
+- winjobs.py by yahoo (https://github.com/yahoo/winjob)

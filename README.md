@@ -3,39 +3,37 @@
 ## Overall Idea
 Autopsy plugin that scans the Auto-Start Extensibility Points (ASEPs) and list out the potential persistences
 
-## TODO / Roadmap
-- [x] Figure out how to import modules into Autopsy
-- [x] Have a disk image to test on
-- [x] Be able to run RegistryExample plugin
-- [x] Figure out where the logging is located
-- [ ] Get list of ASEPs
-- [x] Figure out how to write module
-- [x] Write Module
-	- [x] Registry Run Keys
-    - [x] Scheduled Tasks
-    - [x] Services
-    - [x] Active Setup
-    - [x] WinLogon
-    - [x] Startup Folder
-- [ ] Write Report
-- [ ] ORD
+## User Manual
 
-## Importing python modules into Autopsy
-After opening a case, Tools > Python Module
+### Step 1: Clone / Download the repository
 
-Create a folder inside the python_module folder and place your python file there
-You'll see the ingest module when you do Tool > Run Ingest Module
+![Downloading plugin](screenshots/download.png)
 
-## Log location
-Help > Open Log Folder
+### Step 2: Importing python module into Autopsy
+Autopsy menu bar, Tools > Python Module
 
-autopsy.log.0 is the current running log
+![Opening plugin folder](screenshots/plugin_folder.png)
 
-## Debugging notes
+Copy the entire autoruns folder into the python_modules folder.
 
-Always check the log
+![Copying folder into plugin folder](screenshots/copy_plugin.png)
 
-if you encounter an error whereby the program crashes, high chance whatever file actions you were doing will be locked causing the second instance to create a temp file to fail. To solve this, you need to close and re-open autopsy.
+### Step 3: Create a case and run the module
+
+
+## Debugging & Logs
+Autopsy menu bar, Help > Open Log Folder
+
+![Log folder location](screenshots/debugging.png)
+
+autopsy.log.0 contains the current case log
+
+
+## Test Data
+Tested on Autopsy 4.19.1
+
+Tested with Microsoft's Windows 10 VMware link here[https://developer.microsoft.com/en-us/windows/downloads/virtual-machines/]
+
 
 ## References
 - Installing Python Module (http://sleuthkit.org/autopsy/docs/user-docs/4.19.2/module_install_page.html)

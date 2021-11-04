@@ -18,7 +18,9 @@
 - WinLogon
     - HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon /v Userinit /t REG_SZ /d C:\Windows\Temp\malware.bat /f
     - HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon /v Shell /t REG_SZ /d "explorer.exe, C:\Windows\Temp\malware.bat" /f
-
+- Startup
+	- C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp\malware.bat
+	- %appdata%\Microsoft\Windows\Start Menu\Programs\StartUp\malware.bat
 
 ## Test Data
 

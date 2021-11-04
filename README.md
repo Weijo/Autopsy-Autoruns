@@ -109,6 +109,7 @@ Refer to the test data [folder](https://github.com/Weijo/Autopsy-Autoruns/tree/m
 ### Test data results
 
 After running the plugin 6 data artefacts will appear
+
 ![overall results](screenshots/overall_result.png)
 
 #### Active Setup

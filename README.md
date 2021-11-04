@@ -108,8 +108,26 @@ Refer to the test data README[test_data/README.md] for more information
 
 ### Test data results
 
+After running the plugin 6 data artefacts will appear
+![overall results](screenshots/overall_result.png)
 
+#### Active Setup
+![active setup result](screenshots/active_setup.png)
 
+#### Registry Run Keys
+![registry run result](screenshots/registry_run.png)
+
+#### Scheduled Tasks
+![scheduled tasks result](screenshots/scheduled_tasks.png)
+
+#### Services
+![services result](screenshots/services.png)
+
+#### Startup Programs
+![startup program result](screenshots/startup_program.png)
+
+#### WinLogon Keys
+![winlogon result](screenshots/winlogon.png)
 
 ## References
 - Installing Python Module (http://sleuthkit.org/autopsy/docs/user-docs/4.19.2/module_install_page.html)

@@ -104,7 +104,7 @@ Tested on Autopsy 4.19.1
 
 Tested with Microsoft's Windows 10 VMware link here[https://developer.microsoft.com/en-us/windows/downloads/virtual-machines/]
 
-Refer to the test data README[test_data/README.md] for more information
+Refer to the test data [folder](https://github.com/Weijo/Autopsy-Autoruns/tree/main/test_data) for more information
 
 ### Test data results
 

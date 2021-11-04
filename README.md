@@ -102,7 +102,7 @@ autopsy.log.0 contains the current case log
 ## Test Data
 Tested on Autopsy 4.19.1
 
-Tested with Microsoft's Windows 10 VMware link here[https://developer.microsoft.com/en-us/windows/downloads/virtual-machines/]
+Tested with Microsoft's Windows 10 VMware link [here](https://developer.microsoft.com/en-us/windows/downloads/virtual-machines/)
 
 Refer to the test data [folder](https://github.com/Weijo/Autopsy-Autoruns/tree/main/test_data) for more information
 

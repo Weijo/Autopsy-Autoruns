@@ -5,6 +5,66 @@ Autopsy plugin that scans the Auto-Start Extensibility Points (ASEPs) and list o
 
 ## Current Capabilities
 
+- System Registry Run keys
+    - HKLM/SOFTWARE/Microsoft/Windows/CurrentVersion/Run
+    - HKLM/SOFTWARE/Microsoft/Windows/CurrentVersion/RunOnce
+    - HKLM/SOFTWARE/Microsoft/Windows/CurrentVersion/RunOnceEx
+    - HKLM/SOFTWARE/Microsoft/Windows/CurrentVersion/RunServices
+    - HKLM/SOFTWARE/Microsoft/Windows/CurrentVersion/Policies/Explorer/Run
+    - HKLM/SOFTWARE/WOW6432Node/Microsoft/Windows/CurrentVersion/Run
+    - HKLM/SOFTWARE/WOW6432Node/Microsoft/Windows/CurrentVersion/RunOnce
+    - HKLM/SOFTWARE/WOW6432Node/Microsoft/Windows/CurrentVersion/Policies/Explorer/Run
+    - HKLM/SOFTWARE/Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/Run
+    - HKLM/SOFTWARE/Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnce
+    - HKLM/SOFTWARE/Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnceEx
+    - HKLM/SOFTWARE/Microsoft/Windows/CurrentVersion/Explorer/User Shell Folders, 'Startup'
+    - HKLM/SOFTWARE/Microsoft/Windows/CurrentVersion/Explorer/Shell Folders, 'Startup'
+    - HKLM/SYSTEM/Control/SafeBoot, 'AlternateShell'
+    - HKLM/SYSTEM/Control/Terminal Server/wds/rdpwd, 'StartupPrograms'
+    - HKLM/SYSTEM/Control/Terminal Server/WinStations/RDP-Tcp, 'InitialProgram'
+
+- User Registry Run Keys
+    - HKCU/SOFTWARE/Microsoft/Windows/CurrentVersion/Run
+    - HKCU/SOFTWARE/Microsoft/Windows/CurrentVersion/RunOnce
+    - HKCU/SOFTWARE/Microsoft/Windows/CurrentVersion/RunServices
+    - HKCU/SOFTWARE/Microsoft/Windows/CurrentVersion/RunServicesOnce
+    - HKCU/SOFTWARE/Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/Run
+    - HKCU/SOFTWARE/Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnce
+    - HKCU/SOFTWARE/Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnceEx
+    - HKCU/SOFTWARE/Microsoft/Windows NT/CurrentVersion/Run
+    - HKCU/SOFTWARE/Microsoft/Windows NT/CurrentVersion/Windows/Load
+    - HKCU/SOFTWARE/Microsoft/Windows NT/CurrentVersion/Windows/Run
+    - HKCU/SOFTWARE/Microsoft/Windows NT/CurrentVersion/Winlogon/Shell
+    - HKCU/SOFTWARE/Microsoft/Windows/CurrentVersion/Policies/Explorer/Run
+    - HKCU/SOFTWARE/Microsoft/Windows/CurrentVersion/Policies/System/Shell
+    - HKCU/SOFTWARE/Policies/Microsoft/Windows/System/Scripts/Logon
+    - HKCU/SOFTWARE/Policies/Microsoft/Windows/System/Scripts/Logoff
+    - HKCU/SOFTWARE/WOW6432Node/Microsoft/Windows/CurrentVersion/Policies/Explorer/Run
+    - HKCU/SOFTWARE/WOW6432Node/Microsoft/Windows/CurrentVersion/Run
+    - HKCU/SOFTWARE/WOW6432Node/Microsoft/Windows/CurrentVersion/RunOnce
+    - HKCU/SOFTWARE/Microsoft/Windows/CurrentVersion/Explorer/User Shell Folders, 'Startup'
+    - HKCU/SOFTWARE/Microsoft/Windows/CurrentVersion/Explorer/Shell Folders, 'Startup'
+
+- WinLogon
+    - HKLM/SOFTWARE/Microsoft/Windows NT/CurrentVersion/Winlogon, 'TaskMan'
+    - HKLM/SOFTWARE/Microsoft/Windows NT/CurrentVersion/Winlogon, 'Shell'
+    - HKLM/SOFTWARE/Microsoft/Windows NT/CurrentVersion/Winlogon, 'Userinit'
+    - HKLM/SOFTWARE/Microsoft/Windows NT/CurrentVersion/Winlogon, 'Notify'
+    - HKLM/SOFTWARE/Microsoft/Windows NT/CurrentVersion/Winlogon, 'System'
+    - HKLM/SOFTWARE/Microsoft/Windows NT/CurrentVersion/Winlogon, 'VmApplet'
+
+- Services
+    - HKLM/SYSTEM/ControlSet\*/Services/\*
+
+- Active Setup
+    - HKLM/SOFTWARE/Microsoft/Active Setup/Installed Components/\*
+
+- Scheduled Tasks
+    - C:/Windows/System32/Tasks
+
+- Startup Program
+    - %APPDATA%/Microsoft/Windows/Start Menu/Programs/Startup
+    - %ALLUSERSPROFILE%/Microsoft/Windows/Start Menu/Programs/Startup
 
 
 ## User Manual
@@ -22,7 +82,13 @@ Copy the entire autoruns folder into the python_modules folder.
 
 ![Copying folder into plugin folder](screenshots/copy_plugin.png)
 
-### Step 3: Create a case and run the module
+### Step 3: Create a case
+
+![Creation of case](screenshots/case_creation.png)
+
+### Step 4: Run the module
+
+![Run module](screenshots/run_module.png)
 
 
 ## Debugging & Logs
@@ -63,3 +129,4 @@ Refer to the test data README[test_data/README.md] for more information
 - Active Setup Explained - (https://helgeklein.com/blog/active-setup-explained/)
 - Windows registry persistence search order (https://blogs.blackberry.com/en/2013/09/windows-registry-persistence-part-2-the-run-keys-and-search-order)
 - More ASEP locations (https://dfirtnt.wordpress.com/registry-persistence-paths/)
+- Autoruns program list of ASEP (https://www.microsoftpressstore.com/articles/article.aspx?p=2762082&seqNum=2)

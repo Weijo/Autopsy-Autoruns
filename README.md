@@ -78,7 +78,7 @@ Autopsy menu bar, Tools > Python Module
 
 ![Opening plugin folder](screenshots/plugin_folder.png)
 
-Copy the entire autoruns folder into the python_modules folder.
+Copy the entire autoruns folder into the `python_modules` folder.
 
 ![Copying folder into plugin folder](screenshots/copy_plugin.png)
 
@@ -96,7 +96,7 @@ Autopsy menu bar, Help > Open Log Folder
 
 ![Log folder location](screenshots/debugging.png)
 
-autopsy.log.0 contains the current case log
+`autopsy.log.0` contains the current case log
 
 
 ## Test Data

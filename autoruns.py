@@ -170,10 +170,10 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 'Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/Run',
                 'Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnce',
                 'Microsoft/Windows NT/CurrentVersion/Terminal Server/Install/Software/Microsoft/Windows/CurrentVersion/RunOnceEx',
-                'Microsoft/Windows NT/CurrentVersion/Image File Execution Options',
+                #'Microsoft/Windows NT/CurrentVersion/Image File Execution Options',
                 # 'Classes/CLSID',
-                'Microsoft/Windows NT/CurrentVersion/AppCombatFlags',
-                'Windows/CurrentVersion/Explorer/Browser Helper Objects'
+                #'Microsoft/Windows NT/CurrentVersion/AppCombatFlags',
+                #'Windows/CurrentVersion/Explorer/Browser Helper Objects'
             )
 
             # HKLM\System\CurrentControlSet
@@ -199,12 +199,12 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 'Software/Microsoft/Windows/CurrentVersion/Policies/Explorer/Run',
                 'Software/Microsoft/Windows/CurrentVersion/Policies/System/Shell',
                 'Software/Policies/Microsoft/Windows/System/Scripts/Logon',
-                'Software/Policies/Microsoft/Windows/System/Scripts/Logoff'
+                'Software/Policies/Microsoft/Windows/System/Scripts/Logoff',
                 'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/Policies/Explorer/Run',
                 'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/Run',
                 'Software/WOW6432Node/Microsoft/Windows/CurrentVersion/RunOnce',
-                'Software/Classes/Applications',
-                'Software/Classes/CLSID'
+                #'Software/Classes/Applications',
+                #'Software/Classes/CLSID'
             )
 
             self.registryUserStartupFolder = {
@@ -775,6 +775,15 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 self.log(Level.WARNING, "Artifacts Creation Error, some artifacts may not exist now. ==> ")
 
         try:
+            attributeIdServiceKeyName = skCase.addArtifactAttributeType(
+                "TSK_SERVICE_KEY_NAME",
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                "Key Name"
+            )
+        except:
+            self.log(Level.INFO, "Attributes Creation Error, TSK_SERVICE_DISPLAY_NAME, May already exist. ")
+
+        try:
             attributeIdServiceDisplayName = skCase.addArtifactAttributeType(
                 "TSK_SERVICE_DISPLAY_NAME",
                 BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
@@ -828,6 +837,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
         except:
             self.log(Level.INFO, "Attributes Creation Error, TSK_SERVICE_SERVICE_DLL, May already exist. ")
 
+        attributeIdServiceKeyName = skCase.getAttributeType("TSK_SERVICE_KEY_NAME")
         attributeIdServiceDisplayName = skCase.getAttributeType("TSK_SERVICE_DISPLAY_NAME")
         attributeIdServiceTimestamp = skCase.getAttributeType("TSK_SERVICE_TIMESTAMP")
         attributeIdServiceStartup = skCase.getAttributeType("TSK_SERVICE_STARTUP")
@@ -906,7 +916,8 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
                                 # Get serviceDll located in paramters
                                 if sk and not service_dll:
-                                    timestamp = sk.getTimestamp()
+                                    timeobj = sk.getTimestamp()
+                                    timestamp = timeobj.getTime()
                                     try:
                                         service_dll = sk.getValue("ServiceDll")
                                     except:
@@ -918,7 +929,8 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                                         main = ""
 
                                 if not service_dll and '@' in display_name:
-                                    timestamp = servicekey.getTimestamp()
+                                    timeobj = servicekey.getTimestamp()
+                                    timestamp = timeobj.getTime()
                                     service_dll = display_name.split('@')[1].split(',')[0]
 
                             # self.log(Level.INFO, "Image Path: " + str(image_path) +
@@ -931,13 +943,11 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                             # )
 
                             art = file.newDataArtifact(artType, Arrays.asList(
+                                BlackboardAttribute(attributeIdServiceKeyName, moduleName, str(servicekey.getName())),
                                 BlackboardAttribute(attributeIdServiceDisplayName, moduleName, str(display_name)),
-                                BlackboardAttribute(attributeIdServiceTimestamp, moduleName,
-                                                    str(timestamp)),
-                                BlackboardAttribute(attributeIdServiceStartup, moduleName,
-                                                    self.serviceStartup[startup]),
-                                BlackboardAttribute(attributeIdServiceType, moduleName,
-                                                    self.serviceTypes[service_type]),
+                                BlackboardAttribute(attributeIdServiceTimestamp, moduleName, str(timestamp)),
+                                BlackboardAttribute(attributeIdServiceStartup, moduleName, self.serviceStartup[startup]),
+                                BlackboardAttribute(attributeIdServiceType, moduleName, self.serviceTypes[service_type]),
                                 BlackboardAttribute(attributeIdServiceImagePath, moduleName, str(image_path)),
                                 BlackboardAttribute(attributeIdServiceServiceDll, moduleName, str(service_dll)),
                             ))
@@ -1103,6 +1113,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                     date = data["date"] if data["date"] else ""
                     enabled = data["triggers"][0]["Enabled"] if data["triggers"] else ""
                     command = data["actions"][0]["Command"] if "Command" in data["actions"][0] else ""
+                    command_args = data["actions"][0]["Arguments"] if "Arguments" in data["actions"][0] else ""
                     actions = data["actions"][0] if data["actions"] else ""
                     triggers = data["triggers"][0] if data["triggers"] else ""
                     hidden = data["hidden"] if data["hidden"] else ""
@@ -1116,6 +1127,8 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                     #     "\nTrigger: " + trigger
                     # )
 
+                    full_command = command + " " + command_args if command_args else command
+
                     # Don't index empty commands
                     if command != "":
                         art = file.newDataArtifact(artType, Arrays.asList(
@@ -1123,7 +1136,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                             BlackboardAttribute(attributeIdScheduledTasksDescription, moduleName, description),
                             BlackboardAttribute(attributeIdScheduledTasksDate, moduleName, date),
                             BlackboardAttribute(attributeIdScheduledTasksStatus, moduleName, status),
-                            BlackboardAttribute(attributeIdScheduledTasksCommand, moduleName, command),
+                            BlackboardAttribute(attributeIdScheduledTasksCommand, moduleName, full_command),
                             BlackboardAttribute(attributeIdScheduledTasksActions, moduleName, json.dumps(actions, indent=2)),
                             BlackboardAttribute(attributeIdScheduledTasksTriggers, moduleName, json.dumps(triggers, indent=2)),
                             BlackboardAttribute(attributeIdScheduledTasksHidden, moduleName, hidden),
@@ -1170,6 +1183,15 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                 self.log(Level.WARNING, "Artifacts Creation Error, some artifacts may not exist now. ==> ")
 
         try:
+            attributeIdActiveSetupKeyName = skCase.addArtifactAttributeType(
+                "TSK_ACTIVE_SETUP_KEY_NAME",
+                BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                "Key Name"
+            )
+        except:
+            self.log(Level.INFO, "Attributes Creation Error, TSK_ACTIVE_SETUP_NAME, May already exist. ")
+
+        try:
             attributeIdActiveSetupName = skCase.addArtifactAttributeType(
                 "TSK_ACTIVE_SETUP_NAME",
                 BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
@@ -1213,7 +1235,8 @@ class AutoRunsIngestModule(DataSourceIngestModule):
             )
         except:
             self.log(Level.INFO, "Attributes Creation Error, TSK_ACTIVE_SETUP_TIMESTAMP, May already exist. ")
-
+            
+        attributeIdActiveSetupKeyName = skCase.getAttributeType("TSK_ACTIVE_SETUP_KEY_NAME")
         attributeIdActiveSetupName = skCase.getAttributeType("TSK_ACTIVE_SETUP_NAME")
         attributeIdActiveSetupStubpath = skCase.getAttributeType("TSK_ACTIVE_SETUP_STUBPATH")
         attributeIdActiveSetupComponentID = skCase.getAttributeType("TSK_ACTIVE_SETUP_COMPONENTID")
@@ -1263,6 +1286,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
                     timestamp = timeobj.getTime()
 
                     art = file.newDataArtifact(artType, Arrays.asList(
+                        BlackboardAttribute(attributeIdActiveSetupKeyName, moduleName, str(setupkey.getName())),
                         BlackboardAttribute(attributeIdActiveSetupName, moduleName, str(name)),
                         BlackboardAttribute(attributeIdActiveSetupComponentID, moduleName, str(componentid)),
                         BlackboardAttribute(attributeIdActiveSetupStubpath, moduleName, str(stubpath)),
@@ -1577,5 +1601,4 @@ class AutorunsWithUISettingsPanel(IngestModuleIngestJobSettingsPanel):
 
     # Return the settings used
     def getSettings(self):
-        return self.local_settings
         return self.local_settings

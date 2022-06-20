@@ -944,7 +944,7 @@ class AutoRunsIngestModule(DataSourceIngestModule):
 
                             art = file.newDataArtifact(artType, Arrays.asList(
                                 BlackboardAttribute(attributeIdServiceKeyName, moduleName, str(servicekey.getName())),
-                                BlackboardAttribute(attributeIdServiceDisplayName, moduleName, str(display_name)),
+                                BlackboardAttribute(attributeIdServiceDisplayName, moduleName, display_name),
                                 BlackboardAttribute(attributeIdServiceTimestamp, moduleName, str(timestamp)),
                                 BlackboardAttribute(attributeIdServiceStartup, moduleName, self.serviceStartup[startup]),
                                 BlackboardAttribute(attributeIdServiceType, moduleName, self.serviceTypes[service_type]),
